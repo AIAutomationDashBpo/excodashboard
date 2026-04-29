@@ -1,0 +1,24 @@
+{% set h = headline | default({}) %}
+{% set cards = [
+  ("Total Calls",      h.total_calls      | default(0) | int,   h.calls_change_pct | default(none), ""),
+  ("Success Rate",     h.success_rate     | default(0) | round(1), none, "%"),
+  ("Total Minutes",    h.total_minutes    | default(0) | round(1), none, ""),
+  ("Avg Call Duration",h.avg_duration_sec | default(0) | int,   none, " sec"),
+] %}
+<div class="kpi-strip kpi-strip-4">
+{% for label, value, change, unit in cards %}
+<div class="kpi-card">
+  <div class="kpi-label">{{ label }}</div>
+  <div class="kpi-value">
+    {% if value is number and value == value | int %}{{ "{:,}".format(value | int) }}{% else %}{{ value }}{% endif %}{{ unit }}
+  </div>
+  {% if change is not none %}
+  <span class="kpi-delta {% if change >= 0 %}up{% else %}down{% endif %}">
+    {% if change >= 0 %}▲{% else %}▼{% endif %} {{ change | abs }}% vs prev
+  </span>
+  {% else %}
+  <span class="kpi-delta neutral">—</span>
+  {% endif %}
+</div>
+{% endfor %}
+</div>

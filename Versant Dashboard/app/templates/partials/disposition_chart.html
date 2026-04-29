@@ -1,0 +1,42 @@
+<div class="panel-title">Disposition Breakdown</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;align-items:center">
+  <div id="dispositionDonut"></div>
+  <div style="display:flex;flex-direction:column;gap:2px">
+    {% for d in dispositions %}
+    <div class="dispo-legend-row">
+      <div style="display:flex;align-items:center;gap:7px">
+        <span class="dispo-legend-dot" style="background:{{ d.color }}"></span>
+        <span style="font-size:11px;color:#94a3b8">{{ d.label }}</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px">
+        <span style="font-size:12px;font-weight:600;color:#e2e8f0">{{ d.pct }}%</span>
+      </div>
+    </div>
+    {% endfor %}
+    {% if not dispositions %}
+    <p style="color:#3e6a8a;font-size:12px;text-align:center;padding:16px 0">No data.</p>
+    {% endif %}
+  </div>
+</div>
+<script>
+(function(){
+  const data = {{ dispositions | tojson }};
+  if (!data || !data.length) return;
+  new ApexCharts(document.getElementById('dispositionDonut'), {
+    series: data.map(d => d.count),
+    labels: data.map(d => d.label),
+    colors: data.map(d => d.color),
+    chart: { type: 'donut', height: 190, background: 'transparent', animations: { enabled: false } },
+    legend: { show: false },
+    dataLabels: { enabled: false },
+    stroke: { width: 0 },
+    plotOptions: { pie: { donut: { size: '68%',
+      labels: { show: true, total: {
+        show: true, label: 'Total', color: '#4a7a9a', fontSize: '11px',
+        formatter: w => w.globals.seriesTotals.reduce((a,b)=>a+b,0).toLocaleString()
+      }}
+    }}},
+    tooltip: { theme: 'dark' },
+  }).render();
+})();
+</script>

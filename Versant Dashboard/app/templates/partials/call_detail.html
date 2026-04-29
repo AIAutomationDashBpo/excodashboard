@@ -1,0 +1,39 @@
+{% if call %}
+<div class="space-y-4">
+  <div class="flex items-center justify-between">
+    <h4 class="text-sm font-semibold text-white">Call Detail</h4>
+    <button onclick="document.getElementById('callDetail').innerHTML=''"
+      class="text-slate-500 hover:text-white text-xs">✕ Close</button>
+  </div>
+
+  <div class="grid grid-cols-2 gap-3 text-xs">
+    {% set meta = [
+      ("From", call.from_number or "—"),
+      ("To",   call.to_number   or "—"),
+      ("Start", call.start_time.strftime('%Y-%m-%d %H:%M:%S') if call.start_time else "—"),
+      ("Duration", ((call.duration_seconds // 60)|string + "m " + (call.duration_seconds % 60)|string + "s") if call.duration_seconds else "—"),
+      ("Status", call.status or "—"),
+      ("Direction", call.direction or "—"),
+      ("Disposition", disposition_label),
+      ("Confirmation", call.confirmation_number or "—"),
+      ("Latency", (call.response_latency_ms|string + " ms") if call.response_latency_ms else "—"),
+      ("Caller Verified", "Yes" if call.caller_verified else "No" if call.caller_verified is not none else "—"),
+    ] %}
+    {% for label, val in meta %}
+    <div>
+      <p class="text-slate-500 mb-0.5">{{ label }}</p>
+      <p class="text-slate-200 font-medium">{{ val }}</p>
+    </div>
+    {% endfor %}
+  </div>
+
+  {% if call.transcription %}
+  <div>
+    <p class="text-xs text-slate-500 mb-2 font-medium uppercase tracking-widest">Transcript</p>
+    <div class="bg-slate-950 rounded-lg p-3 text-xs text-slate-300 leading-relaxed max-h-60 overflow-y-auto font-mono whitespace-pre-wrap">{{ call.transcription }}</div>
+  </div>
+  {% endif %}
+</div>
+{% else %}
+<p class="text-slate-500 text-sm text-center py-4">Call not found.</p>
+{% endif %}

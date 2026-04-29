@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+{% block title %}Billing{% endblock %}
+
+{% block content %}
+<!-- Header -->
+<div class="dash-header">
+  <span class="dash-title">Billing Dashboard</span>
+
+  <div class="filter-chip">
+    <span class="fc-label">Worker</span>
+    <select id="workerSelect" onchange="applyFilters()">
+      {% for w in workers %}
+      <option value="{{ w.worker_id }}" {% if w.worker_id == worker_id %}selected{% endif %}>{{ w.name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <div class="filter-chip">
+    <span class="fc-label">Month</span>
+    <input type="month" id="monthInput" value="{{ month }}"
+      style="background:transparent;border:none;outline:none;color:#cbd5e1;font-size:11px;cursor:pointer"
+      onchange="(function(){const p=new URLSearchParams(window.location.search);p.set('month',document.getElementById('monthInput').value);window.location.search=p.toString()})()"/>
+  </div>
+
+  <div class="filter-chip">
+    <span class="fc-label">Currency</span>
+    <span style="color:#cbd5e1">USD</span>
+  </div>
+
+  <div class="freshness-badge"
+    hx-get="/api/system/freshness" hx-trigger="load, every 60s" hx-swap="innerHTML">
+    <span style="width:7px;height:7px;border-radius:50%;background:#334155;display:inline-block"></span>
+    Checking...
+  </div>
+</div>
+
+<div class="dash-content">
+
+  <!-- KPI Strip -->
+  <div hx-get="/api/billing/summary?worker_id={{ worker_id }}&month={{ month }}"
+       hx-trigger="load" hx-swap="innerHTML">
+    <div class="kpi-strip kpi-strip-4">
+      {% for lbl in ["Total Cost (MTD)", "Total Minutes", "Avg Cost / Minute", "Echo Surcharge"] %}
+      <div class="kpi-card"><div class="kpi-label">{{ lbl }}</div><div class="kpi-value" style="color:#253d5a">—</div></div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Cost by Worker table (static from server-side data) -->
+  {% if per_worker_costs %}
+  <div class="panel">
+    <div class="panel-title">Cost by Worker</div>
+    <table class="dash-table">
+      <thead>
+        <tr>
+          <th>Worker</th>
+          <th style="text-align:right">Minutes</th>
+          <th style="text-align:right">Included</th>
+          <th style="text-align:right">Overage</th>
+          <th style="text-align:right">Echo Surcharge</th>
+          <th style="text-align:right">Total Cost</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in per_worker_costs %}
+        <tr>
+          <td class="primary">{{ row.name }}</td>
+          <td style="text-align:right">{{ "{:,}".format(row.minutes | int) }}</td>
+          <td style="text-align:right">{{ "{:,}".format(row.included | int) }}</td>
+          <td style="text-align:right">{{ "{:,}".format(row.overage | int) }}</td>
+          <td style="text-align:right">${{ "{:,.0f}".format(row.echo_surcharge) }}</td>
+          <td class="primary" style="text-align:right;font-weight:600">${{ "{:,.0f}".format(row.total) }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr>
+          <td>Totals</td>
+          <td style="text-align:right">{{ "{:,}".format(per_worker_costs | sum(attribute='minutes') | int) }}</td>
+          <td style="text-align:right">{{ "{:,}".format(per_worker_costs | sum(attribute='included') | int) }}</td>
+          <td style="text-align:right">{{ "{:,}".format(per_worker_costs | sum(attribute='overage') | int) }}</td>
+          <td style="text-align:right">${{ "{:,.0f}".format(per_worker_costs | sum(attribute='echo_surcharge')) }}</td>
+          <td style="text-align:right">${{ "{:,.0f}".format(per_worker_costs | sum(attribute='total')) }}</td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+  {% endif %}
+
+  <!-- Monthly Spend Trend -->
+  <div class="panel">
+    <div class="panel-title">Monthly Spend Trend</div>
+    <div id="billingTrend"></div>
+  </div>
+
+</div><!-- .dash-content -->
+
+<script>
+(function(){
+  const data = {{ monthly_trend | tojson }};
+  if (!data || !data.length) return;
+  new ApexCharts(document.getElementById('billingTrend'), {
+    series: [
+      { name: 'Total Cost (USD)', type: 'line',  data: data.map(d => d.cost   !== undefined ? d.cost   : null) },
+      { name: 'Minutes',          type: 'column', data: data.map(d => d.minutes !== undefined ? d.minutes : null) },
+    ],
+    chart: { height: 200, background: 'transparent', toolbar: { show: false }, animations: { enabled: false } },
+    stroke: { curve: 'smooth', width: [2, 0] },
+    colors: ['#3b82f6', '#1e3a5f'],
+    plotOptions: { bar: { borderRadius: 3, columnWidth: '50%' } },
+    xaxis: {
+      categories: data.map(d => d.month),
+      labels: { style: { colors: '#3e6a8a', fontSize: '10px' } },
+      axisBorder: { show: false }, axisTicks: { show: false },
+    },
+    yaxis: [
+      { labels: { style: { colors: '#3e6a8a', fontSize: '10px' }, formatter: v => '$' + (v/1000).toFixed(0) + 'k' } },
+      { opposite: true, labels: { style: { colors: '#3e6a8a', fontSize: '10px' }, formatter: v => (v/1000).toFixed(0) + 'k' } },
+    ],
+    grid: { borderColor: '#112030', strokeDashArray: 3 },
+    tooltip: {
+      theme: 'dark',
+      y: [
+        { formatter: v => v !== null ? '$' + v.toFixed(2) : '—' },
+        { formatter: v => v !== null ? v.toLocaleString() + ' min' : '—' },
+      ]
+    },
+    legend: { position: 'top', labels: { colors: '#94a3b8' }, fontSize: '11px' },
+    dataLabels: { enabled: false },
+    markers: { size: [3, 0] },
+  }).render();
+})();
+</script>
+{% endblock %}

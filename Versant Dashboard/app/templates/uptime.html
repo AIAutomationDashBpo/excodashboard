@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+{% block title %}Uptime{% endblock %}
+
+{% block content %}
+<!-- Header -->
+<div class="dash-header">
+  <span class="dash-title">Uptime Dashboard</span>
+
+  <div class="filter-chip">
+    <span class="fc-label">Worker</span>
+    <select id="workerSelect" onchange="applyFilters()">
+      {% for w in workers %}
+      <option value="{{ w.worker_id }}" {% if w.worker_id == worker_id %}selected{% endif %}>{{ w.name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <div class="filter-chip">
+    <span class="fc-label">From</span>
+    <input type="date" id="fromDate" value="{{ from_date }}" onchange="applyFilters()"/>
+    <span style="color:#253d5a;margin:0 2px">–</span>
+    <input type="date" id="toDate"   value="{{ to_date }}"   onchange="applyFilters()"/>
+  </div>
+
+  <div class="freshness-badge"
+    hx-get="/api/system/freshness" hx-trigger="load, every 60s" hx-swap="innerHTML">
+    <span style="width:7px;height:7px;border-radius:50%;background:#334155;display:inline-block"></span>
+    Checking...
+  </div>
+</div>
+
+<div class="dash-content">
+
+  <!-- KPI Strip -->
+  <div hx-get="/api/uptime/panel?worker_id={{ worker_id }}&from_date={{ from_date }}&to_date={{ to_date }}"
+       hx-trigger="load" hx-swap="innerHTML">
+    <div class="kpi-strip kpi-strip-4">
+      {% for lbl in ["SLA Target", "Actual Uptime", "Total Downtime", "Penalty Exposure"] %}
+      <div class="kpi-card"><div class="kpi-label">{{ lbl }}</div><div class="kpi-value" style="color:#253d5a">—</div></div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Uptime Over Time chart -->
+  <div class="panel">
+    <div class="panel-title">Uptime Over Time</div>
+    <div id="uptimeChart"></div>
+  </div>
+
+  <!-- Incident Timeline -->
+  <div class="panel">
+    <div class="panel-title">Incident Timeline</div>
+    {% if incidents %}
+    <table class="dash-table">
+      <thead>
+        <tr>
+          <th>Start Time</th>
+          <th>End Time</th>
+          <th>Duration</th>
+          <th>Severity</th>
+          <th>Service</th>
+          <th>Summary</th>
+          <th>Impact</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for i in incidents %}
+      <tr>
+        <td class="mono">{{ i.start_time.strftime('%b %d, %I:%M %p') if i.start_time else '—' }}</td>
+        <td class="mono">{{ i.end_time.strftime('%b %d, %I:%M %p') if i.end_time else '—' }}</td>
+        <td>
+          {% if i.start_time and i.end_time %}
+            {% set dur = (i.end_time - i.start_time).total_seconds() | int %}
+            {% if dur < 3600 %}{{ (dur // 60) }}m{% else %}{{ (dur // 3600) }}h {{ ((dur % 3600) // 60) }}m{% endif %}
+          {% else %}—{% endif %}
+        </td>
+        <td>
+          <span class="sev-badge
+            {% if i.severity in ('critical','high') %}sev-high
+            {% elif i.severity in ('warning','medium') %}sev-medium
+            {% else %}sev-low{% endif %}">
+            {{ i.severity | title if i.severity else '—' }}
+          </span>
+        </td>
+        <td>{{ i.source or '—' }}</td>
+        <td class="primary" style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+          {{ i.description or '—' }}
+        </td>
+        <td>
+          {% if i.severity in ('critical','high') %}
+            <span class="impact-full">Full</span>
+          {% elif i.severity in ('warning','medium') %}
+            <span class="impact-partial">Partial</span>
+          {% else %}
+            <span class="impact-minimal">Minimal</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p style="color:#3e6a8a;font-size:12px;text-align:center;padding:28px 0">No incidents in selected period.</p>
+    {% endif %}
+  </div>
+
+</div><!-- .dash-content -->
+
+<script>
+(function(){
+  const series = {{ uptime_series | tojson }};
+  const slaTarget = {{ (uptime.sla_target_pct if uptime else 99.5) | tojson }};
+
+  const el = document.getElementById('uptimeChart');
+  if (!series || !series.length) {
+    el.innerHTML = '<p style="color:#3e6a8a;font-size:12px;text-align:center;padding:28px 0">No uptime data for period.</p>';
+    return;
+  }
+
+  new ApexCharts(el, {
+    series: [{ name: 'Uptime %', data: series.map(d => d.uptime_pct) }],
+    chart: { type: 'line', height: 200, background: 'transparent', toolbar: { show: false }, animations: { enabled: false } },
+    stroke: { curve: 'smooth', width: 2 },
+    colors: ['#3b82f6'],
+    fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.15, opacityTo: 0.0 } },
+    xaxis: {
+      categories: series.map(d => {
+        const dt = new Date(d.date);
+        return (dt.getMonth()+1) + '/' + dt.getDate();
+      }),
+      labels: { style: { colors: '#3e6a8a', fontSize: '10px' }, rotate: 0 },
+      axisBorder: { show: false }, axisTicks: { show: false },
+      tickAmount: Math.min(series.length, 12),
+    },
+    yaxis: {
+      min: Math.max(90, Math.min(...series.map(d => d.uptime_pct)) - 1),
+      max: 100,
+      decimalsInFloat: 2,
+      labels: { style: { colors: '#3e6a8a', fontSize: '10px' }, formatter: v => v.toFixed(1) + '%' },
+    },
+    grid: { borderColor: '#112030', strokeDashArray: 3 },
+    annotations: {
+      yaxis: [{
+        y: slaTarget,
+        borderColor: '#f87171',
+        borderWidth: 1,
+        strokeDashArray: 5,
+        label: {
+          text: 'SLA Target (' + slaTarget + '%)',
+          style: { color: '#f87171', background: '#0d1929', fontSize: '10px', fontWeight: 500 },
+          position: 'right',
+        }
+      }]
+    },
+    tooltip: { theme: 'dark', y: { formatter: v => v.toFixed(2) + '%' } },
+    dataLabels: { enabled: false },
+    markers: { size: 0, hover: { size: 4 } },
+  }).render();
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,30 @@
+{% if bill %}
+{% set avg_cost = (bill.total / bill.used_minutes) if bill.used_minutes else 0 %}
+{% set cards = [
+  ("Total Cost (MTD)",   "$" + "{:,.0f}".format(bill.total),          none, ""),
+  ("Total Minutes",      "{:,}".format(bill.used_minutes | int),        none, ""),
+  ("Avg Cost / Minute",  "$" + "{:.3f}".format(avg_cost),              none, ""),
+  ("Echo Surcharge",     "$" + "{:,.0f}".format(bill.echo_surcharge),  none, ""),
+] %}
+<div class="kpi-strip kpi-strip-4">
+{% for label, value, change, unit in cards %}
+<div class="kpi-card">
+  <div class="kpi-label">{{ label }}</div>
+  <div class="kpi-value">{{ value }}{{ unit }}</div>
+  <span class="kpi-delta neutral">{{ bill.tier_name | default("—") }}</span>
+</div>
+{% endfor %}
+</div>
+
+{% if bill.overage_minutes > 0 %}
+<div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.25);border-radius:8px;padding:10px 14px;font-size:11px;color:#fbbf24;margin-top:4px">
+  ⚠ {{ "{:,}".format(bill.overage_minutes | int) }} overage minutes charged at higher rate
+</div>
+{% endif %}
+{% else %}
+<div class="kpi-strip kpi-strip-4">
+{% for _ in range(4) %}
+<div class="kpi-card"><div class="kpi-label">—</div><div class="kpi-value" style="color:#253d5a">—</div></div>
+{% endfor %}
+</div>
+{% endif %}

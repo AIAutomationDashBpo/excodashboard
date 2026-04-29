@@ -1,0 +1,36 @@
+<div class="panel-title">Calls Over Time</div>
+<div id="trendChart"></div>
+<script>
+(function(){
+  const data = {{ trend_data | tojson }};
+  if (!data || !data.length) {
+    document.getElementById('trendChart').innerHTML =
+      '<p style="color:#3e6a8a;font-size:12px;text-align:center;padding:28px 0">No data for selected period.</p>';
+    return;
+  }
+  new ApexCharts(document.getElementById('trendChart'), {
+    series: [{ name: 'Calls', data: data.map(d => d.calls) }],
+    chart: {
+      type: 'area', height: 200,
+      background: 'transparent', toolbar: { show: false }, animations: { enabled: false },
+    },
+    stroke: { curve: 'smooth', width: 2 },
+    fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.25, opacityTo: 0.0 } },
+    colors: ['#3b82f6'],
+    xaxis: {
+      categories: data.map(d => {
+        const dt = new Date(d.day);
+        return (dt.getMonth()+1) + '/' + (dt.getDate());
+      }),
+      labels: { style: { colors: '#3e6a8a', fontSize: '10px' }, rotate: 0 },
+      axisBorder: { show: false }, axisTicks: { show: false },
+      tickAmount: Math.min(data.length, 12),
+    },
+    yaxis: { labels: { style: { colors: '#3e6a8a', fontSize: '10px' } } },
+    grid: { borderColor: '#112030', strokeDashArray: 3 },
+    tooltip: { theme: 'dark' },
+    dataLabels: { enabled: false },
+    markers: { size: 0, hover: { size: 4 } },
+  }).render();
+})();
+</script>

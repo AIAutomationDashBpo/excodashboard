@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+{% block title %}Conversation Insights{% endblock %}
+
+{% block content %}
+<!-- Header -->
+<div class="dash-header">
+  <span class="dash-title">Conversation Insights</span>
+
+  <div class="filter-chip">
+    <span class="fc-label">Worker</span>
+    <select id="workerSelect" onchange="applyFilters()">
+      {% for w in workers %}
+      <option value="{{ w.worker_id }}" {% if w.worker_id == worker_id %}selected{% endif %}>{{ w.name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <div class="filter-chip">
+    <span class="fc-label">From</span>
+    <input type="date" id="fromDate" value="{{ from_date }}" onchange="applyFilters()"/>
+    <span style="color:#253d5a;margin:0 2px">–</span>
+    <input type="date" id="toDate"   value="{{ to_date }}"   onchange="applyFilters()"/>
+  </div>
+
+  <div class="freshness-badge"
+    hx-get="/api/system/freshness" hx-trigger="load, every 60s" hx-swap="innerHTML">
+    <span style="width:7px;height:7px;border-radius:50%;background:#334155;display:inline-block"></span>
+    Checking...
+  </div>
+</div>
+
+<div class="dash-content">
+
+  <!-- Row 1: Disposition donut + Disposition over time -->
+  <div class="chart-row-half">
+    <div class="panel"
+      hx-get="/api/insights/disposition?worker_id={{ worker_id }}&env={{ env }}&from_date={{ from_date }}&to_date={{ to_date }}"
+      hx-trigger="load" hx-swap="innerHTML">
+      <div class="panel-title">Disposition Breakdown</div>
+      <p style="color:#3e6a8a;font-size:12px;text-align:center;padding:28px 0">Loading...</p>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">Disposition Over Time</div>
+      <div id="dispositionTrend"></div>
+    </div>
+  </div>
+
+  <!-- Row 2: Recent Call Logs -->
+  <div class="panel">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <div class="panel-title" style="margin-bottom:0">Recent Call Logs</div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <span id="callCount" style="font-size:10px;color:#3e6a8a">
+          {% if total_calls %}{{ "{:,}".format(total_calls) }} total{% endif %}
+        </span>
+        <!-- Phone / confirmation # search -->
+        <div style="display:flex;align-items:center;gap:7px;background:#0c1c30;border:1px solid #1a3553;border-radius:6px;padding:4px 10px">
+          <svg width="12" height="12" fill="currentColor" viewBox="0 0 20 20" style="color:#3e6a8a;flex-shrink:0">
+            <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd"/>
+          </svg>
+          <input id="phoneSearch" type="text" placeholder="Phone, confirmation #…"
+            style="background:transparent;border:none;outline:none;color:#cbd5e1;font-size:11px;width:190px"
+            oninput="debouncedFeedSearch(this.value)"/>
+          <button id="phoneClear" onclick="clearPhoneSearch()"
+            style="display:none;background:none;border:none;color:#3e6a8a;cursor:pointer;padding:0;line-height:1;font-size:14px">✕</button>
+        </div>
+      </div>
+    </div>
+    <div id="callFeed"
+      hx-get="/api/insights/call-feed?worker_id={{ worker_id }}&env={{ env }}&from_date={{ from_date }}&to_date={{ to_date }}&page=1"
+      hx-trigger="load" hx-swap="innerHTML">
+      <p style="color:#3e6a8a;font-size:12px;text-align:center;padding:28px 0">Loading calls...</p>
+    </div>
+  </div>
+
+  <!-- Call detail side panel (appears when row clicked) -->
+  <div id="callDetail" style="display:none" class="panel">
+    <p style="color:#3e6a8a;font-size:12px;text-align:center;padding:12px 0">Select a call row to view details.</p>
+  </div>
+
+</div><!-- .dash-content -->
+
+<script>
+(function(){
+  const trend = {{ disposition_trend | tojson }};
+  if (!trend || !trend.weeks || !trend.weeks.length || !trend.series || !trend.series.length) {
+    document.getElementById('dispositionTrend').innerHTML =
+      '<p style="color:#3e6a8a;font-size:12px;text-align:center;padding:24px 0">No trend data for period.</p>';
+    return;
+  }
+  new ApexCharts(document.getElementById('dispositionTrend'), {
+    series: trend.series.map(s => ({ name: s.name, data: s.data })),
+    colors: trend.series.map(s => s.color),
+    chart: { type: 'area', height: 200, stacked: true, background: 'transparent', toolbar: { show: false }, animations: { enabled: false } },
+    stroke: { curve: 'smooth', width: 1.5 },
+    fill: { type: 'solid', opacity: 0.5 },
+    xaxis: {
+      categories: trend.weeks,
+      labels: { style: { colors: '#3e6a8a', fontSize: '10px' } },
+      axisBorder: { show: false }, axisTicks: { show: false },
+    },
+    yaxis: { labels: { style: { colors: '#3e6a8a', fontSize: '10px' } } },
+    grid: { borderColor: '#112030', strokeDashArray: 3 },
+    legend: { position: 'top', labels: { colors: '#94a3b8' }, fontSize: '10px', itemMargin: { horizontal: 6 } },
+    dataLabels: { enabled: false },
+    tooltip: { theme: 'dark', x: { show: true } },
+  }).render();
+})();
+
+// Phone search with 400ms debounce
+let _searchTimer;
+function debouncedFeedSearch(val) {
+  document.getElementById('phoneClear').style.display = val ? 'block' : 'none';
+  clearTimeout(_searchTimer);
+  _searchTimer = setTimeout(() => fetchFeed(val), 400);
+}
+
+function clearPhoneSearch() {
+  const input = document.getElementById('phoneSearch');
+  input.value = '';
+  document.getElementById('phoneClear').style.display = 'none';
+  fetchFeed('');
+}
+
+function fetchFeed(phone) {
+  const p = new URLSearchParams({
+    worker_id: '{{ worker_id }}',
+    env:       '{{ env }}',
+    from_date: '{{ from_date }}',
+    to_date:   '{{ to_date }}',
+    page:      1,
+  });
+  if (phone && phone.trim()) p.set('phone', phone.trim());
+  htmx.ajax('GET', '/api/insights/call-feed?' + p.toString(), {
+    target: '#callFeed', swap: 'innerHTML',
+  });
+}
+
+// Show/hide call detail panel
+document.body.addEventListener('htmx:afterSwap', function(e){
+  if (e.detail.target.id === 'callDetail') {
+    document.getElementById('callDetail').style.display = 'block';
+  }
+});
+</script>
+{% endblock %}

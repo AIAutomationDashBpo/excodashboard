@@ -1,0 +1,63 @@
+{% if calls %}
+<div style="overflow-x:auto">
+<table class="dash-table">
+  <thead>
+    <tr>
+      <th>Time</th>
+      <th>Phone Number</th>
+      <th>Duration</th>
+      <th>Disposition</th>
+      <th>Confirmation #</th>
+      <th>Agent</th>
+      <th style="text-align:center">Transcript</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for c in calls %}
+  <tr hx-get="/api/insights/call/{{ c.log_id }}?worker_id={{ request.query_params.get('worker_id','') }}"
+      hx-target="#callDetail" hx-swap="innerHTML">
+    <td class="mono" style="white-space:nowrap">
+      {{ c.start_time.strftime('%b %d, %I:%M %p') if c.start_time else '—' }}
+    </td>
+    <td class="mono primary">{{ c.from_number or '—' }}</td>
+    <td>
+      {% if c.duration_seconds %}
+        {{ "%02d:%02d" | format(c.duration_seconds // 60, c.duration_seconds % 60) }}
+      {% else %}—{% endif %}
+    </td>
+    <td>
+      <span class="dispo-pill"
+        style="background:{{ c.disposition_color }}1a;color:{{ c.disposition_color }}">
+        {{ c.disposition_label }}
+      </span>
+    </td>
+    <td class="mono">{{ c.confirmation_number or '—' }}</td>
+    <td>
+      {% if c.direction == 'inbound' %}
+        <span style="font-size:10px;background:rgba(59,130,246,0.13);color:#60a5fa;padding:2px 7px;border-radius:20px">Bot</span>
+      {% else %}
+        <span style="font-size:10px;background:rgba(100,116,139,0.13);color:#94a3b8;padding:2px 7px;border-radius:20px">Human</span>
+      {% endif %}
+    </td>
+    <td style="text-align:center">
+      <svg width="13" height="13" fill="currentColor" viewBox="0 0 20 20" style="color:#253d5a">
+        <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd"/>
+      </svg>
+    </td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% if has_next %}
+<div style="margin-top:12px;text-align:center">
+  <button style="font-size:11px;color:#3b82f6;border:1px solid #1a3553;background:#0c1c30;border-radius:6px;padding:5px 16px;cursor:pointer"
+    hx-get="/api/insights/call-feed?worker_id={{ worker_id }}&env={{ env }}&from_date={{ from_date }}&to_date={{ to_date }}&page={{ page + 1 }}{% if phone %}&phone={{ phone | urlencode }}{% endif %}"
+    hx-target="#callFeed" hx-swap="innerHTML">
+    Load more →
+  </button>
+</div>
+{% endif %}
+{% else %}
+<p style="color:#3e6a8a;font-size:12px;text-align:center;padding:32px 0">No calls for the selected period.</p>
+{% endif %}

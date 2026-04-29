@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+{% block title %}Metrics{% endblock %}
+
+{% block content %}
+<!-- Header -->
+<div class="dash-header">
+  <span class="dash-title">Metrics Dashboard</span>
+
+  <div class="filter-chip">
+    <span class="fc-label">Worker</span>
+    <select id="workerSelect" onchange="applyFilters()">
+      {% for w in workers %}
+      <option value="{{ w.worker_id }}" {% if w.worker_id == worker_id %}selected{% endif %}>{{ w.name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <div class="filter-chip">
+    <span class="fc-label">Environment</span>
+    <select id="envSelect" onchange="applyFilters()">
+      <option value="all"  {% if env == 'all'  or not env %}selected{% endif %}>All</option>
+      <option value="prod" {% if env == 'prod' %}selected{% endif %}>Production</option>
+      <option value="test" {% if env == 'test' %}selected{% endif %}>Test</option>
+      <option value="dev"  {% if env == 'dev'  %}selected{% endif %}>Dev</option>
+    </select>
+  </div>
+
+  <div class="filter-chip">
+    <span class="fc-label">From</span>
+    <input type="date" id="fromDate" value="{{ from_date }}" onchange="applyFilters()"/>
+    <span style="color:#253d5a;margin:0 2px">–</span>
+    <input type="date" id="toDate"   value="{{ to_date }}"   onchange="applyFilters()"/>
+  </div>
+
+  <div class="freshness-badge"
+    hx-get="/api/system/freshness" hx-trigger="load, every 60s" hx-swap="innerHTML">
+    <span style="width:7px;height:7px;border-radius:50%;background:#334155;display:inline-block"></span>
+    Checking...
+  </div>
+</div>
+
+<div class="dash-content">
+
+  <!-- KPI Strip -->
+  <div id="kpiStrip"
+    hx-get="/api/metrics/headline?worker_id={{ worker_id }}&env={{ env }}&from_date={{ from_date }}&to_date={{ to_date }}"
+    hx-trigger="load" hx-swap="innerHTML">
+    {% include "partials/headline_strip.html" %}
+  </div>
+
+  <!-- Row 2: Trend chart + Disposition donut -->
+  <div class="chart-row-2-1">
+    <div class="panel"
+      hx-get="/api/metrics/trend?worker_id={{ worker_id }}&from_date={{ from_date }}&to_date={{ to_date }}"
+      hx-trigger="load" hx-swap="innerHTML">
+      <div class="panel-title">Calls Over Time</div>
+      <p style="color:#3e6a8a;font-size:12px;text-align:center;padding:28px 0">Loading...</p>
+    </div>
+
+    <div class="panel"
+      hx-get="/api/insights/disposition?worker_id={{ worker_id }}&env={{ env }}&from_date={{ from_date }}&to_date={{ to_date }}"
+      hx-trigger="load" hx-swap="innerHTML">
+      <div class="panel-title">Disposition Breakdown</div>
+      <p style="color:#3e6a8a;font-size:12px;text-align:center;padding:28px 0">Loading...</p>
+    </div>
+  </div>
+
+  <!-- Row 3: Top hours heatmap + Top phone numbers -->
+  <div class="chart-row-half">
+    <div class="panel">
+      <div class="panel-title">Top Performing Hours</div>
+      <div id="hoursHeatmap"></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">Top Phone Numbers <span style="color:#253d5a;font-weight:400">(By Minutes)</span></div>
+      <div id="topNumbers" style="margin-top:4px">
+        {% if top_phone_numbers %}
+          {% set max_min = top_phone_numbers[0].minutes if top_phone_numbers else 1 %}
+          {% for n in top_phone_numbers %}
+          <div style="display:flex;align-items:center;gap:10px;padding:5px 0">
+            <span style="font-family:monospace;font-size:11px;color:#94a3b8;width:120px;flex-shrink:0">{{ n.number }}</span>
+            <div class="top-num-bar-track">
+              <div class="top-num-bar-fill" style="width:{{ [(n.minutes / (max_min or 1) * 100) | round | int, 100] | min }}%"></div>
+            </div>
+            <span style="font-size:11px;font-weight:600;color:#e2e8f0;width:38px;text-align:right;flex-shrink:0">{{ "{:,}".format(n.minutes) }}</span>
+          </div>
+          {% endfor %}
+        {% else %}
+          <p style="color:#3e6a8a;font-size:12px;text-align:center;padding:24px 0">No call data for period.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+</div><!-- .dash-content -->
+
+<script>
+(function(){
+  const heatmapData = {{ heatmap_series | tojson }};
+  if (!heatmapData || !heatmapData.length) {
+    document.getElementById('hoursHeatmap').innerHTML =
+      '<p style="color:#3e6a8a;font-size:12px;text-align:center;padding:24px 0">No data for period.</p>';
+    return;
+  }
+  new ApexCharts(document.getElementById('hoursHeatmap'), {
+    series: heatmapData,
+    chart: { type: 'heatmap', height: 160, background: 'transparent', toolbar: { show: false },
+             animations: { enabled: false } },
+    dataLabels: { enabled: false },
+    colors: ['#3b82f6'],
+    plotOptions: {
+      heatmap: {
+        shadeIntensity: 0.6,
+        colorScale: {
+          ranges: [
+            { from: 0, to: 0, color: '#0e1f30', name: 'None' },
+            { from: 1, to: 50, color: '#1e3a5f', name: 'Low' },
+            { from: 51, to: 150, color: '#2563eb', name: 'Med' },
+            { from: 151, to: 10000, color: '#60a5fa', name: 'High' },
+          ]
+        }
+      }
+    },
+    xaxis: { labels: { style: { colors: '#3e6a8a', fontSize: '9px' } }, axisBorder: { show: false }, axisTicks: { show: false } },
+    yaxis: { labels: { style: { colors: '#3e6a8a', fontSize: '9px' } } },
+    grid: { show: false },
+    legend: {
+      show: true,
+      position: 'bottom',
+      labels: { colors: '#3e6a8a' },
+      fontSize: '10px',
+      itemMargin: { horizontal: 6 },
+    },
+    tooltip: {
+      theme: 'dark',
+      y: { formatter: v => v + ' calls' }
+    },
+  }).render();
+})();
+</script>
+{% endblock %}

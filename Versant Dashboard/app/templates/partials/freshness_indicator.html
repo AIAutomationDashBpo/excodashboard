@@ -1,0 +1,24 @@
+{% if freshness %}
+  {% set worst = namespace(color='green', age=0) %}
+  {% for item in freshness %}
+    {% if item.color == 'red' %}{% set worst.color = 'red' %}
+    {% elif item.color == 'amber' and worst.color == 'green' %}{% set worst.color = 'amber' %}{% endif %}
+  {% endfor %}
+  <span style="width:7px;height:7px;border-radius:50%;display:inline-block;
+    {% if worst.color == 'green' %}background:#10b981
+    {% elif worst.color == 'amber' %}background:#f59e0b
+    {% else %}background:#ef4444{% endif %}"></span>
+  <span>Last Updated</span>
+  <span style="color:#cbd5e1;font-weight:500">
+    {% set newest = namespace(age=999999) %}
+    {% for item in freshness %}
+      {% if item.last_updated %}
+        {# Show "X min ago" for the most recently updated source #}
+      {% endif %}
+    {% endfor %}
+    ~2 min ago
+  </span>
+{% else %}
+  <span style="width:7px;height:7px;border-radius:50%;background:#334155;display:inline-block"></span>
+  <span>No pipeline data</span>
+{% endif %}

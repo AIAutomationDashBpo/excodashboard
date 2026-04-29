@@ -1,0 +1,183 @@
+/* ── Reset & Base ─────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+
+/* ── Sidebar ──────────────────────────────────────────────────────────────── */
+.sidebar {
+  width: 168px; flex-shrink: 0;
+  background: #07101e;
+  border-right: 1px solid #112030;
+  display: flex; flex-direction: column; align-items: stretch;
+  padding: 12px 8px 16px; gap: 2px;
+  position: fixed; top: 0; left: 0; bottom: 0; z-index: 100;
+}
+.sidebar-logo {
+  width: 32px; height: 32px; background: #2563eb; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 18px; flex-shrink: 0; text-decoration: none;
+}
+.nav-icon {
+  height: 38px; border-radius: 8px; padding: 0 10px;
+  display: flex; align-items: center; gap: 10px;
+  color: #2d4a6a; text-decoration: none;
+  transition: color 0.15s, background 0.15s; flex-shrink: 0;
+  font-size: 12px; font-weight: 500; white-space: nowrap;
+}
+.nav-icon svg { flex-shrink: 0; }
+.nav-icon:hover { color: #94a3b8; background: rgba(255,255,255,0.04); }
+.nav-icon.active { color: #60a5fa; background: rgba(37,99,235,0.18); }
+
+/* ── Dashboard page header ────────────────────────────────────────────────── */
+.dash-header {
+  background: #07101e;
+  border-bottom: 1px solid #112030;
+  padding: 9px 20px;
+  display: flex; align-items: center; gap: 10px; flex-shrink: 0; flex-wrap: wrap;
+}
+.dash-title {
+  font-size: 11px; font-weight: 700; color: #e2e8f0;
+  letter-spacing: 0.12em; text-transform: uppercase; white-space: nowrap;
+}
+
+/* ── Filter chips ─────────────────────────────────────────────────────────── */
+.filter-chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: #0c1c30; border: 1px solid #1a3553;
+  border-radius: 6px; padding: 4px 9px;
+  font-size: 11px; color: #94a3b8;
+}
+.filter-chip .fc-label { color: #3e6080; font-size: 10px; white-space: nowrap; }
+.filter-chip select,
+.filter-chip input[type=date] {
+  background: transparent; border: none; outline: none;
+  color: #cbd5e1; font-size: 11px; cursor: pointer; padding: 0;
+}
+.filter-chip input[type=date]::-webkit-calendar-picker-indicator { filter: invert(0.5); }
+
+/* ── Freshness badge ──────────────────────────────────────────────────────── */
+.freshness-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: #0c1c30; border: 1px solid #1a3553;
+  border-radius: 6px; padding: 4px 10px;
+  font-size: 11px; color: #3e6080; white-space: nowrap;
+}
+
+/* ── Page content wrapper ─────────────────────────────────────────────────── */
+.dash-content {
+  flex: 1; padding: 14px 18px;
+  overflow-y: auto;
+  display: flex; flex-direction: column; gap: 12px;
+  background: #080f1c;
+}
+
+/* ── KPI cards ────────────────────────────────────────────────────────────── */
+.kpi-strip { display: grid; gap: 10px; }
+.kpi-strip-4 { grid-template-columns: repeat(4, 1fr); }
+.kpi-strip-5 { grid-template-columns: repeat(5, 1fr); }
+
+.kpi-card {
+  background: #0f1e30; border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 10px; padding: 14px 16px;
+}
+.kpi-label {
+  font-size: 10px; font-weight: 600; color: #4a7a9a;
+  text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 5px;
+}
+.kpi-value {
+  font-size: 26px; font-weight: 700; color: #f1f5f9;
+  line-height: 1.05; margin-bottom: 6px; letter-spacing: -0.02em;
+}
+.kpi-delta {
+  display: inline-flex; align-items: center; gap: 3px;
+  font-size: 10px; font-weight: 600;
+  padding: 2px 7px; border-radius: 20px; line-height: 1.4;
+}
+.kpi-delta.up     { background: rgba(16,185,129,0.13); color: #34d399; }
+.kpi-delta.down   { background: rgba(239,68,68,0.13);  color: #f87171; }
+.kpi-delta.neutral{ background: rgba(100,116,139,0.18); color: #94a3b8; }
+
+/* ── Panel ────────────────────────────────────────────────────────────────── */
+.panel {
+  background: #0f1e30; border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 10px; padding: 14px 16px;
+}
+.panel-title {
+  font-size: 10px; font-weight: 600; color: #3e6a8a;
+  text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 12px;
+}
+
+/* ── Chart layouts ────────────────────────────────────────────────────────── */
+.chart-row-2-1 { display: grid; grid-template-columns: 2fr 1fr; gap: 10px; }
+.chart-row-half{ display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.chart-row-3   { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+
+/* ── Tables ───────────────────────────────────────────────────────────────── */
+.dash-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.dash-table thead th {
+  padding: 0 10px 8px; text-align: left;
+  font-size: 10px; font-weight: 500; color: #3e6a8a;
+  text-transform: uppercase; letter-spacing: 0.07em;
+  border-bottom: 1px solid #152d42;
+}
+.dash-table tbody td { padding: 7px 10px; color: #7a9ab8; border-bottom: 1px solid #0e1f30; }
+.dash-table tbody td.primary { color: #e2e8f0; }
+.dash-table tbody td.mono { font-family: monospace; font-size: 11px; }
+.dash-table tbody tr:last-child td { border-bottom: none; }
+.dash-table tbody tr:hover { background: rgba(255,255,255,0.025); cursor: pointer; }
+.dash-table tfoot td {
+  padding: 8px 10px; font-weight: 600; color: #cbd5e1;
+  font-size: 11px; border-top: 1px solid #1a3553;
+}
+
+/* ── Disposition pill ─────────────────────────────────────────────────────── */
+.dispo-pill {
+  display: inline-block; padding: 2px 9px;
+  border-radius: 20px; font-size: 10px; font-weight: 500;
+}
+
+/* ── Severity badge ───────────────────────────────────────────────────────── */
+.sev-badge {
+  display: inline-block; padding: 2px 8px;
+  border-radius: 20px; font-size: 10px; font-weight: 600;
+}
+.sev-critical { background: rgba(239,68,68,0.15); color: #f87171; }
+.sev-high     { background: rgba(239,68,68,0.15); color: #f87171; }
+.sev-medium   { background: rgba(245,158,11,0.15); color: #fbbf24; }
+.sev-low      { background: rgba(100,116,139,0.15); color: #94a3b8; }
+.sev-warning  { background: rgba(245,158,11,0.15); color: #fbbf24; }
+
+/* ── Impact badge ─────────────────────────────────────────────────────────── */
+.impact-partial  { background: rgba(245,158,11,0.13); color: #f59e0b; font-size:10px; padding:2px 8px; border-radius:20px; font-weight:500; }
+.impact-full     { background: rgba(239,68,68,0.13); color: #ef4444; font-size:10px; padding:2px 8px; border-radius:20px; font-weight:500; }
+.impact-minimal  { background: rgba(100,116,139,0.13); color: #94a3b8; font-size:10px; padding:2px 8px; border-radius:20px; font-weight:500; }
+
+/* ── Scrollbar ────────────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: #07101e; }
+::-webkit-scrollbar-thumb { background: #1a3553; border-radius: 3px; }
+
+/* ── HTMX indicator ───────────────────────────────────────────────────────── */
+.htmx-indicator { opacity: 0; transition: opacity 200ms ease-in; }
+.htmx-request .htmx-indicator { opacity: 1; }
+.htmx-request.htmx-indicator  { opacity: 1; }
+
+/* ── Uptime chart ─────────────────────────────────────────────────────────── */
+.uptime-pct-green { color: #34d399; }
+.uptime-pct-red   { color: #f87171; }
+
+/* ── Disposition legend ───────────────────────────────────────────────────── */
+.dispo-legend-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 4px 0;
+}
+.dispo-legend-dot {
+  width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+}
+
+/* ── Top numbers bar ──────────────────────────────────────────────────────── */
+.top-num-bar-track {
+  flex: 1; height: 6px; background: #0e1f30; border-radius: 3px; overflow: hidden;
+}
+.top-num-bar-fill {
+  height: 100%; background: #3b82f6; border-radius: 3px;
+  transition: width 0.4s ease;
+}

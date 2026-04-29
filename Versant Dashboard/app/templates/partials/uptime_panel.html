@@ -1,0 +1,50 @@
+{% if uptime %}
+{% set h = (uptime.downtime_minutes // 60) | int %}
+{% set m = (uptime.downtime_minutes % 60) | int %}
+{% set vs_target = ((uptime.uptime_pct | float) - (uptime.sla_target_pct | float)) | round(2) %}
+<div class="kpi-strip kpi-strip-4">
+
+  <div class="kpi-card">
+    <div class="kpi-label">SLA Target</div>
+    <div class="kpi-value">{{ uptime.sla_target_pct }}%</div>
+    <span class="kpi-delta neutral">Configured</span>
+  </div>
+
+  <div class="kpi-card">
+    <div class="kpi-label">Actual Uptime</div>
+    <div class="kpi-value {% if uptime.breach %}uptime-pct-red{% else %}uptime-pct-green{% endif %}">
+      {{ uptime.uptime_pct }}%
+    </div>
+    <span class="kpi-delta {% if vs_target >= 0 %}up{% else %}down{% endif %}">
+      {% if vs_target >= 0 %}▲{% else %}▼{% endif %} {{ vs_target | abs }}% vs Target
+    </span>
+  </div>
+
+  <div class="kpi-card">
+    <div class="kpi-label">Total Downtime</div>
+    <div class="kpi-value">{{ h }}h {{ m }}m</div>
+    <span class="kpi-delta neutral">{{ uptime.critical_errors }} critical errors</span>
+  </div>
+
+  <div class="kpi-card">
+    <div class="kpi-label">Penalty Exposure</div>
+    <div class="kpi-value {% if uptime.breach %}uptime-pct-red{% endif %}">
+      ${{ "{:,.0f}".format(uptime.penalty_exposure) }}
+    </div>
+    <span class="kpi-delta {% if uptime.breach %}down{% else %}neutral{% endif %}">
+      {% if uptime.breach %}SLA BREACHED{% else %}No Breach{% endif %}
+    </span>
+  </div>
+
+</div>
+{% else %}
+<div class="kpi-strip kpi-strip-4">
+{% for lbl in ["SLA Target", "Actual Uptime", "Total Downtime", "Penalty Exposure"] %}
+<div class="kpi-card">
+  <div class="kpi-label">{{ lbl }}</div>
+  <div class="kpi-value" style="color:#253d5a">—</div>
+  <span class="kpi-delta neutral">No data</span>
+</div>
+{% endfor %}
+</div>
+{% endif %}
