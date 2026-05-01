@@ -1,1681 +1,2027 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AI Agent Performance — DashBPO</title>
   <script src="config.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            cohere: {
+              black: '#000000',
+              primary: '#17171c',
+              green: '#003c33',
+              navy: '#071829',
+              blue: '#1863dc',
+              coral: '#a7c957',
+              coralLight: '#ffad9b',
+              stone: '#eeece7',
+              paleGreen: '#edfce9',
+              paleBlue: '#f1f5ff',
+              cardBorder: '#f2f2f2',
+              ink: '#212121',
+              slateMuted: '#93939f',
+              slate: '#75758a',
+              hairline: '#d9d9dd',
+              borderLight: '#e5e7eb',
+            }
+          },
+          fontFamily: {
+            display: ['InterDisplay', 'Inter', 'ui-sans-serif', 'system-ui'],
+            body: ['InterDisplay', 'Inter', 'ui-sans-serif', 'system-ui'],
+            mono: ['InterDisplay', 'Inter', 'ui-monospace', 'SFMono-Regular', 'monospace'],
+          }
+        }
+      }
+    }
+  </script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
   <style>
-    * { font-family: 'Inter', system-ui, sans-serif; box-sizing: border-box; }
-    ::-webkit-scrollbar { width: 5px; height: 5px; }
-    ::-webkit-scrollbar-track { background: #f1f5f9; }
-    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
-    .tabular { font-variant-numeric: tabular-nums; }
-    input[type="date"]::-webkit-calendar-picker-indicator { filter: none; cursor: pointer; opacity: 0.5; }
-    .skeleton { background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
-                background-size: 200% 100%; animation: shimmer 1.5s infinite; }
-    @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
-    .fade-in { animation: fadeIn 0.3s ease; }
-    @keyframes fadeIn { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:translateY(0)} }
-    .section-error { border: 1px solid #f87171; }
-    .tab-btn { border-bottom-width: 2px; }
-    .tab-btn.active { border-color: #4f46e5; color: #4f46e5; }
-    .tab-content { animation: fadeIn 0.3s ease; }
-    .kpi-card { border-left-width: 4px; }
+    body {
+      font-family: 'InterDisplay', 'Inter', sans-serif;
+      box-sizing: border-box;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6,
+    .font-display {
+      font-family: 'InterDisplay', 'Inter', sans-serif;
+      letter-spacing: -0.02em;
+    }
+
+    .font-mono {
+      font-family: 'InterDisplay', 'Inter', sans-serif;
+    }
+
+    ::-webkit-scrollbar {
+      width: 5px;
+      height: 5px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: #f1f5f9;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 3px;
+    }
+
+    .tabular {
+      font-variant-numeric: tabular-nums;
+    }
+
+    input[type="date"]::-webkit-calendar-picker-indicator {
+      filter: none;
+      cursor: pointer;
+      opacity: 0.5;
+    }
+
+    .skeleton {
+      background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+    }
+
+    @keyframes shimmer {
+      0% {
+        background-position: 200% 0
+      }
+
+      100% {
+        background-position: -200% 0
+      }
+    }
+
+    .fade-in {
+      animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(4px)
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0)
+      }
+    }
+
+    .section-error {
+      border: 1px solid var(--cohere-coral, #a7c957);
+    }
+
+    .tab-btn.active {
+      color: var(--cohere-black, #000000);
+    }
+
+    .tab-content {
+      animation: fadeIn 0.3s ease;
+    }
+
+    .active-tab {
+      background-color: rgba(238, 236, 231, 0.2);
+      color: var(--cohere-black, #000000) !important;
+      border-radius: 12px;
+    }
+
+    .active-tab svg {
+      color: var(--cohere-black, #000000);
+    }
+
+    .tab-btn:not(.active-tab):hover {
+      background-color: rgba(23, 23, 28, 0.05);
+      color: var(--cohere-black, #000000);
+      border-radius: 12px;
+    }
+
+    .sidebar-transition {
+      transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1), margin-left 0.4s cubic-bezier(0.4, 0, 0.2, 1), transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
+    }
+
+    .sidebar-closed {
+      width: 0 !important;
+      transform: translateX(-100%);
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .main-full {
+      margin-left: 0 !important;
+    }
+
+    #sidebarToggleMain {
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+
+    .sidebar-closed~#mainWrapper #sidebarToggleMain {
+      opacity: 1;
+      pointer-events: auto;
+    }
   </style>
 </head>
-<body class="bg-gray-50 text-gray-900 min-h-screen">
 
-<!-- ═══════════════════════════════════════════════════════════
+<body class="bg-white text-cohere-ink min-h-screen flex flex-col lg:flex-row overflow-x-hidden">
+
+  <!-- ═══════════════════════════════════════════════════════════
      SETUP MODAL  (shown when API key is missing)
 ═══════════════════════════════════════════════════════════ -->
-<div id="setupModal" class="fixed inset-0 bg-black/80 z-50 flex items-center justify-center hidden">
-  <div class="bg-slate-800 rounded-2xl p-8 w-full max-w-md border border-slate-700 shadow-2xl">
-    <div class="flex items-center gap-3 mb-5">
-      <div class="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center flex-shrink-0">
-        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-            d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
-        </svg>
+  <div id="setupModal" class="fixed inset-0 bg-black/80 z-50 flex items-center justify-center hidden backdrop-blur-sm">
+    <div class="bg-cohere-primary rounded-[22px] p-10 w-full max-w-lg border border-white/10 shadow-2xl">
+      <div class="flex items-center gap-4 mb-8">
+        <div class="w-12 h-12 bg-white rounded-xl flex items-center justify-center flex-shrink-0">
+          <svg class="w-6 h-6 text-cohere-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+          </svg>
+        </div>
+        <div>
+          <h2 class="text-2xl font-display font-medium text-white tracking-tight">Access Restricted</h2>
+          <p class="text-[14px] text-cohere-slateMuted mt-1">Configure your enterprise credentials to proceed.</p>
+        </div>
       </div>
-      <div>
-        <h2 class="font-bold text-white">API Key Required</h2>
-        <p class="text-xs text-slate-400">Add your key to <code class="bg-slate-700 px-1 rounded">config.js</code> and reload</p>
+      <div
+        class="bg-black/40 rounded-xl p-6 text-[13px] font-mono text-cohere-slateMuted border border-white/5 leading-relaxed">
+        <span class="text-white/20">// config.js</span><br>
+        <span class="text-cohere-blue">const</span> <span class="text-white">CONFIG</span> = {<br>
+        &nbsp;&nbsp;API_KEY: <span class="text-cohere-paleBlue">'your_key_here'</span>,<br>
+        &nbsp;&nbsp;BASE_URL: <span class="text-cohere-paleBlue">'https://api.brainbase.io'</span><br>
+        };
       </div>
+      <p class="text-[12px] text-white/30 mt-6 font-mono">
+        Reference <code class="bg-white/5 px-1.5 py-0.5 rounded text-white/50">config.example.js</code> for full
+        specification.
+      </p>
     </div>
-    <div class="bg-slate-900 rounded-lg p-4 text-xs font-mono text-slate-300 leading-relaxed">
-      <span class="text-slate-500">// config.js</span><br>
-      <span class="text-purple-400">const</span> CONFIG = {<br>
-      &nbsp;&nbsp;API_KEY: <span class="text-amber-300">'your_key_here'</span>,<br>
-      &nbsp;&nbsp;BASE_URL: <span class="text-amber-300">'https://brainbase-monorepo-api.onrender.com'</span>,<br>
-      &nbsp;&nbsp;DEBUG: <span class="text-blue-400">false</span>,<br>
-      };
-    </div>
-    <p class="text-xs text-slate-500 mt-4">
-      Refer to <code class="bg-slate-700 px-1 rounded">config.example.js</code> for the full template.
-    </p>
   </div>
-</div>
 
-<!-- ═══════════════════════════════════════════════════════════
+  <!-- ═══════════════════════════════════════════════════════════
      HEADER
 ═══════════════════════════════════════════════════════════ -->
-<header class="bg-gradient-to-r from-[#1a2e4a] to-[#1e3f6e] px-6 py-3 sticky top-0 z-40 shadow-md">
-  <div class="max-w-screen-2xl mx-auto flex items-center justify-between gap-4">
 
-    <!-- Logo -->
-    <div class="flex items-center gap-3 flex-shrink-0">
-      <div class="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
-        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-            d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+  <!-- ═══════════════════════════════════════════════════════════
+     SIDEBAR (Desktop)
+═══════════════════════════════════════════════════════════ -->
+  <aside id="sidebar"
+    class="fixed inset-y-0 left-0 w-80 bg-white border-r border-cohere-borderLight hidden lg:flex flex-col z-50 overflow-y-auto sidebar-transition">
+    <!-- Close Toggle (Sidebar side) -->
+    <button onclick="toggleSidebar()"
+      class="absolute right-4 top-9 text-cohere-slateMuted hover:text-cohere-black transition-colors"
+      id="closeSidebarBtn">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+      </svg>
+    </button>
+
+    <!-- Brand / Logo -->
+    <div class="p-6 flex items-center gap-4 border-b border-cohere-borderLight overflow-hidden">
+      <div class="w-10 h-10 bg-cohere-coral rounded-xl flex items-center justify-center flex-shrink-0 text-white">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 8v8m-4-5v5m-4-2v2" />
         </svg>
       </div>
-      <div class="leading-none">
-        <p class="text-sm font-bold text-white tracking-tight">Dash Digital</p>
-        <p class="text-xs text-blue-200/70 mt-0.5">AI Agent Performance Dashboard</p>
+      <div class="sidebar-text">
+        <h1 class="text-xl font-display font-medium text-cohere-black tracking-tight leading-none whitespace-nowrap">
+          Dash Digital</h1>
+        <p class="text-[11px] font-mono text-cohere-slateMuted mt-1.5 whitespace-nowrap">Performance
+          Hub</p>
       </div>
     </div>
 
-    <!-- Controls -->
-    <div class="flex items-center gap-2 flex-wrap">
-      <!-- Date range -->
-      <div class="flex items-center gap-1.5 bg-white/10 border border-white/20 rounded-lg px-3 py-1.5 text-xs text-white">
-        <span class="text-blue-200/60 text-[10px] font-medium uppercase tracking-wider">FROM</span>
-        <input type="date" id="startDate" class="bg-transparent text-white focus:outline-none w-[100px] cursor-pointer">
-        <span class="text-white/40 mx-1">—</span>
-        <span class="text-blue-200/60 text-[10px] font-medium uppercase tracking-wider">TO</span>
-        <input type="date" id="endDate" class="bg-transparent text-white focus:outline-none w-[100px] cursor-pointer">
-      </div>
-
-      <!-- Quick date buttons -->
-      <div class="flex items-center gap-1">
-        <button onclick="setDateRange('today')"    class="quick-date-btn px-2.5 py-1.5 text-xs text-white/70 hover:text-white hover:bg-white/10 rounded-lg transition">Today</button>
-        <button onclick="setDateRange('7d')"        class="quick-date-btn px-2.5 py-1.5 text-xs text-white/70 hover:text-white hover:bg-white/10 rounded-lg transition">Last 7 Days</button>
-        <button onclick="setDateRange('14d')"       class="quick-date-btn px-2.5 py-1.5 text-xs text-white/70 hover:text-white hover:bg-white/10 rounded-lg transition">Last 14 Days</button>
-        <button onclick="setDateRange('30d')"       class="quick-date-btn px-2.5 py-1.5 text-xs text-white/70 hover:text-white hover:bg-white/10 rounded-lg transition">Last 30 Days</button>
-        <button onclick="setDateRange('mtd')"       class="quick-date-btn px-2.5 py-1.5 text-xs text-white/70 hover:text-white hover:bg-white/10 rounded-lg transition">Month to Date</button>
-      </div>
-
-      <!-- Status / countdown -->
-      <div class="flex items-center gap-1.5 text-xs text-white/60">
-        <span id="statusDot" class="w-2 h-2 rounded-full bg-white/30 flex-shrink-0"></span>
-        <span id="statusText">—</span>
-      </div>
-
-      <!-- Refresh -->
-      <button id="refreshBtn" onclick="triggerRefresh()"
-        class="flex items-center gap-1.5 bg-white/15 hover:bg-white/25 active:scale-95
-               text-white border border-white/20 rounded-lg px-3 py-1.5 text-xs font-medium transition">
-        <svg id="refreshIcon" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <!-- Navigation -->
+    <nav class="p-6 space-y-1.5 flex-1 overflow-hidden">
+      <p class="sidebar-label text-[11px] font-mono text-cohere-slateMuted mb-4 px-4 whitespace-nowrap">
+        Navigation</p>
+      <button id="tabOverview" onclick="switchTab('overview')"
+        class="sidebar-nav-item tab-btn active w-full flex items-center gap-3 px-5 py-2.5 rounded-xl text-[14px] font-medium transition-all group active-tab">
+        <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0
-               0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+            d="M4 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM14 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1v-4zM14 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
         </svg>
-        Refresh
+        <span class="sidebar-text whitespace-nowrap">Overview</span>
       </button>
+      <button id="tabCancellations" onclick="switchTab('cancellations')"
+        class="sidebar-nav-item tab-btn w-full flex items-center gap-3 px-5 py-2.5 rounded-xl text-[14px] font-medium text-cohere-slateMuted hover:text-cohere-black hover:bg-cohere-stone transition-all group">
+        <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+        </svg>
+        <span class="sidebar-text whitespace-nowrap">Cancellations</span>
+      </button>
+    </nav>
 
-      <!-- Last updated -->
-      <span id="lastUpdated" class="hidden text-xs text-white/50 tabular"></span>
+    <!-- Filters / Controls -->
+    <div class="p-6 border-t border-cohere-borderLight bg-cohere-stone/20 overflow-hidden">
+      <p class="sidebar-label text-[11px] font-mono text-cohere-slateMuted mb-6 whitespace-nowrap">
+        System Controls</p>
 
-      <!-- Countdown pill -->
-      <span id="countdownPill"
-        class="hidden text-xs bg-white/10 text-white/60 border border-white/10 rounded-full px-2.5 py-1 tabular">
-        Next in <span id="countdownVal">15:00</span>
-      </span>
+      <div class="space-y-5">
+        <!-- Date Range Stack -->
+        <div class="space-y-3">
+          <div
+            class="bg-white border border-cohere-borderLight rounded-xl p-3 focus-within:ring-2 focus-within:ring-cohere-blue/10 transition-shadow">
+            <label class="sidebar-label block text-[10px] font-mono text-cohere-slateMuted mb-1 whitespace-nowrap">Start
+              Date</label>
+            <input type="date" id="startDate"
+              class="w-full bg-transparent text-sm font-medium focus:outline-none cursor-pointer">
+          </div>
+          <div
+            class="bg-white border border-cohere-borderLight rounded-xl p-3 focus-within:ring-2 focus-within:ring-cohere-blue/10 transition-shadow">
+            <label class="sidebar-label block text-[10px] font-mono text-cohere-slateMuted mb-1 whitespace-nowrap">End
+              Date</label>
+            <input type="date" id="endDate"
+              class="w-full bg-transparent text-sm font-medium focus:outline-none cursor-pointer">
+          </div>
+        </div>
+
+        <!-- Preset Range -->
+        <div class="relative sidebar-text">
+          <select onchange="setDateRange(this.value)"
+            class="appearance-none w-full bg-white border border-cohere-borderLight rounded-xl px-4 py-3 text-[12px] font-mono tracking-tight text-cohere-slate hover:text-cohere-black transition focus:outline-none cursor-pointer pr-10">
+            <option value="" disabled selected>Preset range</option>
+            <option value="today">Today</option>
+            <option value="7d">Last 7 Days</option>
+            <option value="14d">Last 14 Days</option>
+            <option value="30d">Last 30 Days</option>
+            <option value="mtd">Month to Date</option>
+          </select>
+          <div class="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-cohere-slateMuted">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+            </svg>
+          </div>
+        </div>
+
+        <!-- Refresh Button -->
+        <button id="refreshBtn" onclick="triggerRefresh()" class="w-full flex items-center justify-center gap-2 bg-cohere-blue hover:bg-cohere-blue/90 active:scale-[0.98]
+               text-white rounded-xl py-3.5 text-sm font-medium transition">
+          <svg id="refreshIcon" class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          <span class="sidebar-text whitespace-nowrap">Synchronize Data</span>
+        </button>
+      </div>
     </div>
-  </div>
-</header>
 
-<!-- ═══════════════════════════════════════════════════════════
+    <!-- Status Footer -->
+    <div class="p-6 border-t border-cohere-borderLight space-y-6 bg-white overflow-hidden">
+      <div class="flex items-start justify-between">
+        <div class="flex items-start gap-3">
+          <span id="statusDot" class="w-2 h-2 rounded-full bg-cohere-borderLight flex-shrink-0 mt-1"></span>
+          <span id="statusText" class="sidebar-text text-[10px] font-mono tracking-wider text-cohere-slateMuted">System
+            Standby</span>
+        </div>
+        <span id="countdownPill"
+          class="sidebar-text hidden text-[10px] bg-cohere-stone text-cohere-slateMuted rounded-full px-2 py-0.5 tabular whitespace-nowrap mt-0.5">
+          <span id="countdownVal">15:00</span>
+        </span>
+      </div>
+
+      <div class="sidebar-footer-content pt-4 border-t border-cohere-borderLight/50">
+        <p id="lastUpdated" class="hidden text-[10px] text-cohere-slateMuted tabular leading-none font-mono mb-4"></p>
+        <p class="text-[10px] text-cohere-slateMuted leading-relaxed font-mono tracking-wider">
+          DashBPO Node &copy; 2026
+        </p>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ═══════════════════════════════════════════════════════════
+     MOBILE HEADER
+═══════════════════════════════════════════════════════════ -->
+  <header
+    class="lg:hidden bg-white sticky top-0 z-40 border-b border-cohere-borderLight px-6 h-[72px] flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <button onclick="toggleSidebar()" class="p-2 bg-cohere-stone rounded-full lg:hidden">
+        <svg class="w-4 h-4 text-cohere-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+      </button>
+      <div class="flex items-center gap-3">
+        <svg class="w-6 h-6 text-cohere-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 8v8m-4-5v5m-4-2v2" />
+        </svg>
+        <span class="font-display font-medium text-cohere-black">Dash Digital</span>
+      </div>
+    </div>
+    <div class="flex items-center gap-3">
+      <button onclick="triggerRefresh()" class="p-2 bg-cohere-stone rounded-full">
+        <svg class="w-4 h-4 text-cohere-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+        </svg>
+      </button>
+      <!-- Tab Switcher for Mobile -->
+      <select onchange="switchTab(this.value)"
+        class="bg-cohere-stone border-none rounded-full px-4 py-1.5 text-xs font-medium">
+        <option value="overview">Overview</option>
+        <option value="cancellations">Cancellations</option>
+      </select>
+    </div>
+  </header>
+
+  <!-- ═══════════════════════════════════════════════════════════
+     MAIN CONTENT WRAPPER
+═══════════════════════════════════════════════════════════ -->
+  <div id="mainWrapper" class="flex-1 lg:ml-80 flex flex-col min-w-0 min-h-screen sidebar-transition">
+    <!-- Floating Open Toggle (Visible when sidebar closed) -->
+    <button id="sidebarToggleMain" onclick="toggleSidebar()"
+      class="fixed left-6 top-10 z-40 bg-white border border-cohere-borderLight rounded-full p-3 text-cohere-black shadow-lg hover:shadow-xl transition-all hidden lg:flex items-center justify-center">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+      </svg>
+    </button>
+
+    <!-- ═══════════════════════════════════════════════════════════
      MAIN
 ═══════════════════════════════════════════════════════════ -->
-<main class="max-w-screen-2xl mx-auto px-6 py-5 space-y-5">
+    <main class="w-full max-w-screen-2xl mx-auto px-6 lg:px-12 py-12 space-y-12">
 
-  <!-- Date range label -->
-  <div class="flex items-center justify-between text-xs text-gray-400">
-    <span id="dateRangeLabel"></span>
-  </div>
-
-  <!-- ── TAB NAVIGATION ──────────────────────────────────────── -->
-  <div class="flex items-center gap-1 border-b border-gray-200 -mx-6 px-6 bg-white">
-    <button id="tabOverview" class="tab-btn active px-4 py-3 text-sm font-medium text-indigo-600 border-b-2 border-indigo-500 transition cursor-pointer" onclick="switchTab('overview')">
-      Overview
-    </button>
-    <button id="tabCancellations" class="tab-btn px-4 py-3 text-sm font-medium text-gray-500 border-b-2 border-transparent hover:text-gray-900 transition cursor-pointer" onclick="switchTab('cancellations')">
-      Cancellations
-    </button>
-  </div>
-
-  <!-- ── OVERVIEW TAB ────────────────────────────────────────── -->
-  <div id="overviewTab" class="tab-content">
-
-  <!-- ── KPI CARDS ──────────────────────────────────────────── -->
-  <section id="kpiSection" class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-    <div class="skeleton rounded-xl h-24"></div>
-    <div class="skeleton rounded-xl h-24"></div>
-    <div class="skeleton rounded-xl h-24"></div>
-  </section>
-
-  <!-- ── Worker Bar (full width) ───────────────────────────── -->
-  <section id="workerSection" class="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-    <div class="flex items-center justify-between mb-1">
-      <h3 class="text-sm font-semibold text-gray-800">Worker Agent Performance</h3>
-      <span class="text-xs text-gray-400">total calls by AI agent</span>
-    </div>
-    <p id="workerDebug" class="text-xs text-gray-300 mb-3 font-mono"></p>
-    <div class="skeleton rounded-lg" style="height:220px" id="workerSkel"></div>
-    <div style="position:relative;height:220px;display:none" id="workerWrap">
-      <canvas id="workerChart"></canvas>
-    </div>
-  </section>
-
-  <!-- ── DEPLOYMENT TABLE ───────────────────────────────────── -->
-  <section class="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
-    <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between gap-3">
-      <div>
-        <h3 class="text-sm font-semibold text-gray-800">Deployment Details</h3>
-        <p class="text-xs text-gray-400 mt-0.5">Aggregated across all periods · click column header to sort</p>
-        <p id="tableDebug" class="text-xs text-gray-300 mt-0.5 font-mono"></p>
+      <!-- Date range label -->
+      <div class="flex items-center justify-between text-xs ">
+        <span id="dateRangeLabel"></span>
       </div>
-      <div class="flex items-center gap-3">
-        <input type="text" id="tableSearch" placeholder="Search agent or environment…"
-          oninput="UI.filterTable(this.value)"
-          class="bg-white border border-gray-300 rounded-lg px-3 py-1.5 text-xs text-gray-700
-                 placeholder-gray-400 focus:outline-none focus:border-indigo-400 w-56 transition">
-        <span id="tableCount" class="text-xs text-gray-400 flex-shrink-0"></span>
-      </div>
-    </div>
-    <div class="overflow-x-auto">
-      <table class="w-full text-xs">
-        <thead>
-          <tr class="border-b border-gray-100 bg-gray-50">
-            <th data-col="workerName"     class="th-sort text-left   px-5 py-3 text-gray-600 font-semibold">Worker Agent</th>
-            <th data-col="deploymentName" class="th-sort text-left   px-5 py-3 text-gray-600 font-semibold">Environment</th>
-            <th data-col="status"         class="th-sort text-left   px-5 py-3 text-gray-600 font-semibold">Status</th>
-            <th data-col="calls"          class="th-sort text-right  px-5 py-3 text-gray-600 font-semibold">Calls</th>
-            <th data-col="minutes"        class="th-sort text-right  px-5 py-3 text-gray-600 font-semibold">Minutes</th>
-            <th data-col="averageCallDuration" class="th-sort text-right px-5 py-3 text-gray-600 font-semibold">Avg Duration</th>
-            <th data-col="topDisposition" class="th-sort text-left   px-5 py-3 text-gray-600 font-semibold">Top Disposition</th>
-          </tr>
-        </thead>
-        <tbody id="tableBody" class="divide-y divide-gray-100">
-          <tr><td colspan="7" class="px-5 py-10 text-center text-gray-400">Loading…</td></tr>
-        </tbody>
-      </table>
-    </div>
-  </section>
 
-  <p class="text-center text-xs text-gray-300 pb-2">
-    Brainbase Voice API · DashBPO Performance Dashboard
-  </p>
 
-  </div><!-- /overviewTab -->
 
-  <!-- ── CANCELLATIONS TAB ───────────────────────────────────── -->
-  <div id="cancellationsTab" class="tab-content hidden">
-    <div class="mb-4 bg-white border border-gray-200 rounded-xl px-5 py-3 flex items-center gap-6 shadow-sm">
-      <div>
-        <p class="text-xs text-gray-400 uppercase tracking-wider font-medium">Worker</p>
-        <p id="cancelWorkerName" class="text-sm font-semibold text-gray-800 mt-0.5">—</p>
-      </div>
-      <div class="w-px h-8 bg-gray-200"></div>
-      <div>
-        <p class="text-xs text-gray-400 uppercase tracking-wider font-medium">Deployment</p>
-        <p id="cancelDeploymentName" class="text-sm font-semibold text-gray-800 mt-0.5">—</p>
-      </div>
-    </div>
+      <!-- ── OVERVIEW TAB ────────────────────────────────────────── -->
+      <div id="overviewTab" class="tab-content space-y-10">
 
-    <!-- Cancellation KPI Cards -->
-    <p id="cancelKpiDebug" class="text-xs text-gray-300 mb-2 font-mono"></p>
-    <section id="cancelKpiSection" class="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-5">
-      <div class="skeleton rounded-xl h-28"></div>
-      <div class="skeleton rounded-xl h-28"></div>
-      <div class="skeleton rounded-xl h-28"></div>
-    </section>
+        <!-- ── KPI CARDS ──────────────────────────────────────────── -->
+        <section id="kpiSection" class="relative grid grid-cols-1 sm:grid-cols-3 gap-6">
+          <div class="skeleton rounded-[16px] h-36"></div>
+          <div class="skeleton rounded-[16px] h-36"></div>
+          <div class="skeleton rounded-[16px] h-36"></div>
+        </section>
 
-    <!-- Billing Estimate -->
-    <section id="cancelBillingSection" class="bg-white border border-gray-200 rounded-xl p-6 shadow-sm mb-5">
-      <div class="flex items-center justify-between mb-4">
-        <div>
-          <h3 class="text-sm font-semibold text-gray-800">Billing Estimate</h3>
-          <p class="text-xs text-gray-400 mt-0.5">Based on voice-analysis minutes × SLA rate</p>
+        <!-- ── Worker Agent Performance ───────────────────────────── -->
+        <section id="workerSection" class="relative bg-white border border-cohere-borderLight rounded-[16px] p-8 pb-14">
+          <div class="mb-8">
+            <h3 class="text-2xl font-display font-medium text-cohere-black tracking-tight">Worker Agent Performance</h3>
+            <p class="text-[14px] text-cohere-slateMuted mt-1">Total calls aggregated by ai agent</p>
+          </div>
+          <div class="skeleton rounded-lg" style="height:400px" id="workerSkel"></div>
+          <div style="position:relative;height:400px;display:none" id="workerWrap">
+            <canvas id="workerChart"></canvas>
+          </div>
+          <p id="workerDebug" class="absolute bottom-6 right-8 text-[9px] font-mono text-cohere-slateMuted">
+          </p>
+        </section>
+
+        <!-- ── DEPLOYMENT TABLE ───────────────────────────────────── -->
+        <section class="relative bg-white border border-cohere-borderLight rounded-[16px] p-8 pb-14">
+          <div class="flex items-center justify-between mb-10">
+            <div>
+              <h3 class="text-2xl font-display font-medium text-cohere-black tracking-tight">Deployment Details</h3>
+              <p class="text-[14px] text-cohere-slateMuted mt-1">Aggregated across all periods</p>
+            </div>
+            <div class="flex items-center gap-4">
+              <div class="relative">
+                <input type="text" id="tableSearch" placeholder="Search agent or environment…"
+                  oninput="UI.filterTable(this.value)"
+                  class="bg-white border border-cohere-borderLight rounded-xl px-4 py-2 pl-10 text-[13px] text-cohere-ink
+                   placeholder-cohere-slateMuted focus:outline-none focus:ring-2 focus:ring-cohere-blue/10 focus:border-cohere-blue w-64 transition">
+                <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-cohere-slateMuted" fill="none"
+                  stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </div>
+              <span id="tableCount" class="text-[12px] font-mono text-cohere-slateMuted flex-shrink-0"></span>
+            </div>
+          </div>
+          <div id="tableSkel" class="skeleton rounded-lg" style="height:400px"></div>
+          <div id="tableWrap" class="overflow-x-auto" style="display:none">
+            <table class="w-full text-xs">
+              <thead>
+                <tr class="border-b border-cohere-borderLight">
+                  <th data-col="workerName"
+                    class="th-sort text-left   px-8 py-4 text-cohere-slateMuted font-mono font-normal">
+                    Worker agent</th>
+                  <th data-col="deploymentName"
+                    class="th-sort text-left   px-5 py-4 text-cohere-slateMuted font-mono font-normal">
+                    Environment</th>
+                  <th data-col="status"
+                    class="th-sort text-left   px-5 py-4 text-cohere-slateMuted font-mono font-normal">
+                    Status</th>
+                  <th data-col="calls"
+                    class="th-sort text-right  px-5 py-4 text-cohere-slateMuted font-mono font-normal">
+                    Calls</th>
+                  <th data-col="minutes"
+                    class="th-sort text-right  px-5 py-4 text-cohere-slateMuted font-mono font-normal">
+                    Minutes</th>
+                  <th data-col="averageCallDuration"
+                    class="th-sort text-right px-5 py-4 text-cohere-slateMuted font-mono font-normal">Avg
+                    duration</th>
+                  <th data-col="topDisposition"
+                    class="th-sort text-left   px-8 py-4 text-cohere-slateMuted font-mono font-normal">
+                    Top
+                    disposition</th>
+                </tr>
+              </thead>
+              <tbody id="tableBody" class="divide-y divide-gray-100">
+              </tbody>
+            </table>
+          </div>
+          <p id="tableDebug" class="absolute bottom-6 right-8 text-[9px] font-mono text-cohere-slateMuted">
+          </p>
+        </section>
+
+      </div><!-- /main content wrapper -->
+
+      <!-- ── CANCELLATIONS TAB ───────────────────────────────────── -->
+      <div id="cancellationsTab" class="tab-content hidden space-y-10">
+        <div class="bg-white border border-cohere-borderLight rounded-[16px] px-8 py-6 flex items-center gap-8">
+          <div>
+            <p class="text-[13px] text-cohere-slateMuted font-mono">Worker</p>
+            <p id="cancelWorkerName" class="text-base font-medium text-cohere-black mt-1">—</p>
+          </div>
+          <div class="w-px h-10 bg-cohere-borderLight"></div>
+          <div>
+            <p class="text-[13px] text-cohere-slateMuted font-mono">Deployment</p>
+            <p id="cancelDeploymentName" class="text-base font-medium text-cohere-black mt-1">—</p>
+          </div>
         </div>
-        <p id="cancelBillingDebug" class="text-xs text-gray-300 font-mono text-right max-w-sm truncate"></p>
-      </div>
-      <div id="cancelBillingContent" class="skeleton rounded-lg h-28"></div>
-    </section>
 
-    <!-- Cancellation Metrics -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
-      <section id="cancelCompletionSection" class="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-        <h3 class="text-sm font-semibold text-gray-800 mb-1">Completed Call Status</h3>
-        <p id="cancelCompletionDebug" class="text-xs text-gray-300 mb-3 font-mono"></p>
-        <div id="cancelCompletionContent" class="skeleton rounded-lg h-32"></div>
-      </section>
+        <!-- Cancellation KPI Cards -->
+        <section id="cancelKpiSection" class="grid grid-cols-2 sm:grid-cols-3 gap-4">
+          <div class="skeleton rounded-xl h-28"></div>
+          <div class="skeleton rounded-xl h-28"></div>
+          <div class="skeleton rounded-xl h-28"></div>
+        </section>
 
-      <section id="cancelDispositionSection" class="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-        <h3 class="text-sm font-semibold text-gray-800 mb-1">Disposition</h3>
-        <p id="cancelDispositionDebug" class="text-xs text-gray-300 mb-3 font-mono"></p>
-        <div id="cancelDispositionContent" class="skeleton rounded-lg h-32"></div>
-      </section>
+        <!-- Billing Estimate -->
+        <section id="cancelBillingSection" class="bg-white border border-cohere-borderLight rounded-[16px] p-8">
+          <div class="flex items-center justify-between mb-6">
+            <div>
+              <h3 class="text-2xl font-display font-medium text-cohere-black tracking-tight">Billing Estimate</h3>
+              <p class="text-[14px] text-cohere-slateMuted mt-1">Based on voice-analysis minutes × SLA rate</p>
+            </div>
+            <div id="cancelBillingContent" class="skeleton rounded-lg h-28"></div>
+        </section>
 
-      <section id="cancelBotRtSection" class="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-        <h3 class="text-sm font-semibold text-gray-800 mb-1">Bot Response Time (Average)</h3>
-        <p id="cancelBotRtDebug" class="text-xs text-gray-300 mb-3 font-mono"></p>
-        <div id="cancelBotRtContent" class="skeleton rounded-lg h-32"></div>
-      </section>
+        <!-- Cancellation Metrics -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <section id="cancelCompletionSection" class="bg-white border border-cohere-borderLight rounded-[16px] p-8">
+            <h3 class="text-xl font-display font-medium text-cohere-black tracking-tight mb-1">Completed Call Status
+            </h3>
+            <div id="cancelCompletionContent" class="skeleton rounded-lg h-32"></div>
+          </section>
 
-      <section id="cancelStatusSection" class="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-        <h3 class="text-sm font-semibold text-gray-800 mb-1">Cancellation Status</h3>
-        <p id="cancelStatusDebug" class="text-xs text-gray-300 mb-3 font-mono"></p>
-        <div id="cancelStatusContent" class="skeleton rounded-lg h-32"></div>
-      </section>
+          <section id="cancelDispositionSection" class="bg-white border border-cohere-borderLight rounded-[16px] p-8">
+            <h3 class="text-xl font-display font-medium text-cohere-black tracking-tight mb-1">Disposition</h3>
+            <div id="cancelDispositionContent" class="skeleton rounded-lg h-32"></div>
+          </section>
 
-      <section id="cancelAuthSection" class="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-        <h3 class="text-sm font-semibold text-gray-800 mb-1">Authentication Status</h3>
-        <p id="cancelAuthDebug" class="text-xs text-gray-300 mb-3 font-mono"></p>
-        <div id="cancelAuthContent" class="skeleton rounded-lg h-32"></div>
-      </section>
-    </div>
-  </div><!-- /cancellationsTab -->
+          <section id="cancelBotRtSection" class="bg-white border border-cohere-borderLight rounded-[16px] p-8">
+            <h3 class="text-xl font-display font-medium text-cohere-black tracking-tight mb-1">Bot Response Time
+              (Average)</h3>
+            <div id="cancelBotRtContent" class="skeleton rounded-lg h-32"></div>
+          </section>
 
-</main>
+          <section id="cancelStatusSection" class="bg-white border border-cohere-borderLight rounded-[16px] p-8">
+            <h3 class="text-xl font-display font-medium text-cohere-black tracking-tight mb-1">Cancellation Status</h3>
+            <div id="cancelStatusContent" class="skeleton rounded-lg h-32"></div>
+          </section>
 
-<!-- ═══════════════════════════════════════════════════════════
+          <section id="cancelAuthSection" class="bg-white border border-cohere-borderLight rounded-[16px] p-8">
+            <h3 class="text-xl font-display font-medium text-cohere-black tracking-tight mb-1">Authentication Status
+            </h3>
+            <div id="cancelAuthContent" class="skeleton rounded-lg h-32"></div>
+          </section>
+        </div>
+      </div><!-- /cancellationsTab -->
+
+    </main>
+
+    <!-- ═══════════════════════════════════════════════════════════
      SCRIPTS
 ═══════════════════════════════════════════════════════════ -->
 
-<!-- ── APIClient ─────────────────────────────────────────────── -->
-<script>
-'use strict';
+    <!-- ── APIClient ─────────────────────────────────────────────── -->
+    <script>
+      'use strict';
 
-class ApiError extends Error {
-  constructor(status, message) {
-    super(message);
-    this.status = status;
-  }
-}
+      class ApiError extends Error {
+        constructor(status, message) {
+          super(message);
+          this.status = status;
+        }
+      }
 
-const APIClient = (() => {
-  function headers() {
-    return { 'Content-Type': 'application/json', 'x-api-key': CONFIG.API_KEY };
-  }
+      const APIClient = (() => {
+        function headers() {
+          return { 'Content-Type': 'application/json', 'x-api-key': CONFIG.API_KEY };
+        }
 
-  async function request(url, options, attempt = 1) {
-    const res = await fetch(url, { ...options, headers: headers() });
-    if (!res.ok) {
-      if (res.status >= 500 && attempt === 1) return request(url, options, 2);
-      const text = await res.text().catch(() => `HTTP ${res.status}`);
-      throw new ApiError(res.status, text.slice(0, 200));
-    }
-    const data = await res.json();
-    if (CONFIG.DEBUG) console.log('[APIClient]', url, data);
-    return data;
-  }
+        async function request(url, options, attempt = 1) {
+          const res = await fetch(url, { ...options, headers: headers() });
+          if (!res.ok) {
+            if (res.status >= 500 && attempt === 1) return request(url, options, 2);
+            const text = await res.text().catch(() => `HTTP ${res.status}`);
+            throw new ApiError(res.status, text.slice(0, 200));
+          }
+          const data = await res.json();
+          if (CONFIG.DEBUG) console.log('[APIClient]', url, data);
+          return data;
+        }
 
-  return {
-    fetchVoiceAnalysis(startDate, endDate, granularity) {
-      return request(`${CONFIG.BASE_URL}/api/voice-analysis`, {
-        method: 'POST',
-        body: JSON.stringify({
-          startDate,
-          endDate,
-          granularity,
-          includeTransfers:   true,
-          includeCallDetails: true,
-        }),
-      });
-    },
+        return {
+          fetchVoiceAnalysis(startDate, endDate, granularity) {
+            return request(`${CONFIG.BASE_URL}/api/voice-analysis`, {
+              method: 'POST',
+              body: JSON.stringify({
+                startDate,
+                endDate,
+                granularity,
+                includeTransfers: true,
+                includeCallDetails: true,
+              }),
+            });
+          },
 
-    fetchDeployment(id) {
-      return request(`${CONFIG.BASE_URL}/api/deployments/${id}`, { method: 'GET' });
-    },
+          fetchDeployment(id) {
+            return request(`${CONFIG.BASE_URL}/api/deployments/${id}`, { method: 'GET' });
+          },
 
-    async fetchAllDeployments(ids) {
-      const results = await Promise.allSettled(ids.map(id => APIClient.fetchDeployment(id)));
-      const map = {};
-      results.forEach((r, i) => {
-        if (r.status === 'fulfilled') map[ids[i]] = r.value;
-        else console.warn('[APIClient] deployment fetch failed:', ids[i], r.reason?.message);
-      });
-      return map;
-    },
+          async fetchAllDeployments(ids) {
+            const results = await Promise.allSettled(ids.map(id => APIClient.fetchDeployment(id)));
+            const map = {};
+            results.forEach((r, i) => {
+              if (r.status === 'fulfilled') map[ids[i]] = r.value;
+              else console.warn('[APIClient] deployment fetch failed:', ids[i], r.reason?.message);
+            });
+            return map;
+          },
 
-    async fetchWorkerDeploymentLogsPaginated(workerId, deploymentId, startDate, endDate, pageSize = 100) {
-      const params = new URLSearchParams();
-      params.append('deploymentId', deploymentId);
-      if (startDate) params.append('startTimeAfter', startDate);
-      if (endDate)   params.append('startTimeBefore', endDate);
-      params.append('limit', pageSize);
-      const url = `${CONFIG.BASE_URL}/api/workers/${workerId}/deploymentLogs/voice?${params}`;
-      const response = await request(url, { method: 'GET' });
-      return response.data || [];
-    },
+          async fetchWorkerDeploymentLogsPaginated(workerId, deploymentId, startDate, endDate, pageSize = 100) {
+            const params = new URLSearchParams();
+            params.append('deploymentId', deploymentId);
+            if (startDate) params.append('startTimeAfter', startDate);
+            if (endDate) params.append('startTimeBefore', endDate);
+            params.append('limit', pageSize);
+            const url = `${CONFIG.BASE_URL}/api/workers/${workerId}/deploymentLogs/voice?${params}`;
+            const response = await request(url, { method: 'GET' });
+            return response.data || [];
+          },
 
-    async fetchWorkerDeploymentLogsSliced(workerId, deploymentId, startDate, endDate) {
-      const WINDOW_HOURS  = 1.5;   // 90-minute windows to stay under server timeout
-      const CONCURRENCY   = 15;    // max parallel requests at any time
-      const PAGE_SIZE     = 100;   // records per slice (generous for 2h windows)
+          async fetchWorkerDeploymentLogsSliced(workerId, deploymentId, startDate, endDate) {
+            const WINDOW_HOURS = 1.5;   // 90-minute windows to stay under server timeout
+            const CONCURRENCY = 15;    // max parallel requests at any time
+            const PAGE_SIZE = 100;   // records per slice (generous for 2h windows)
 
-      const start    = new Date(startDate).getTime();
-      const end      = new Date(endDate).getTime();
-      const windowMs = WINDOW_HOURS * 60 * 60 * 1000;
-      const total    = Math.ceil((end - start) / windowMs);
+            const start = new Date(startDate).getTime();
+            const end = new Date(endDate).getTime();
+            const windowMs = WINDOW_HOURS * 60 * 60 * 1000;
+            const total = Math.ceil((end - start) / windowMs);
 
-      const windows = Array.from({ length: total }, (_, i) => ({
-        from: new Date(start + i * windowMs).toISOString(),
-        to:   new Date(Math.min(start + (i + 1) * windowMs, end)).toISOString(),
-      }));
+            const windows = Array.from({ length: total }, (_, i) => ({
+              from: new Date(start + i * windowMs).toISOString(),
+              to: new Date(Math.min(start + (i + 1) * windowMs, end)).toISOString(),
+            }));
 
-      console.info(`[Logs] ${total} × ${WINDOW_HOURS}h windows over ${Math.round((end-start)/86400000)} day(s), concurrency=${CONCURRENCY}`);
+            console.info(`[Logs] ${total} × ${WINDOW_HOURS}h windows over ${Math.round((end - start) / 86400000)} day(s), concurrency=${CONCURRENCY}`);
 
-      // Concurrency-limited runner with up to 2 retries per slice
-      const MAX_RETRIES = 2;
-      const settled = new Array(total);
-      let idx = 0;
-      const runner = async () => {
-        while (idx < total) {
-          const i = idx++;
-          const w = windows[i];
-          let lastErr;
-          for (let attempt = 1; attempt <= MAX_RETRIES + 1; attempt++) {
-            try {
-              settled[i] = { status: 'fulfilled', value: await this.fetchWorkerDeploymentLogsPaginated(workerId, deploymentId, w.from, w.to, PAGE_SIZE) };
-              if (attempt > 1) console.info(`[Logs] Slice ${i + 1} recovered on attempt ${attempt}`);
-              lastErr = null;
-              break;
-            } catch (err) {
-              lastErr = err;
-              if (attempt <= MAX_RETRIES) await new Promise(r => setTimeout(r, attempt * 500));
+            // Concurrency-limited runner with up to 2 retries per slice
+            const MAX_RETRIES = 2;
+            const settled = new Array(total);
+            let idx = 0;
+            const runner = async () => {
+              while (idx < total) {
+                const i = idx++;
+                const w = windows[i];
+                let lastErr;
+                for (let attempt = 1; attempt <= MAX_RETRIES + 1; attempt++) {
+                  try {
+                    settled[i] = { status: 'fulfilled', value: await this.fetchWorkerDeploymentLogsPaginated(workerId, deploymentId, w.from, w.to, PAGE_SIZE) };
+                    if (attempt > 1) console.info(`[Logs] Slice ${i + 1} recovered on attempt ${attempt}`);
+                    lastErr = null;
+                    break;
+                  } catch (err) {
+                    lastErr = err;
+                    if (attempt <= MAX_RETRIES) await new Promise(r => setTimeout(r, attempt * 500));
+                  }
+                }
+                if (lastErr) settled[i] = { status: 'rejected', reason: lastErr };
+              }
+            };
+            await Promise.all(Array.from({ length: Math.min(CONCURRENCY, total) }, runner));
+
+            const allLogs = [];
+            let failedSlices = 0;
+            settled.forEach((r, i) => {
+              if (r.status === 'fulfilled') {
+                allLogs.push(...r.value);
+              } else {
+                failedSlices++;
+                console.warn(`[Logs] Slice ${i + 1}/${total} FAILED (${windows[i].from.slice(0, 16)}):`, r.reason?.message);
+              }
+            });
+
+            if (failedSlices > 0) {
+              console.warn(`[Logs] ⚠ ${failedSlices}/${total} slices failed — ${allLogs.length} records returned (INCOMPLETE)`);
+            } else {
+              console.info(`[Logs] ✓ All ${total} slices OK — ${allLogs.length} records`);
+            }
+            allLogs._failedSlices = failedSlices;
+            allLogs._totalSlices = total;
+            return allLogs;
+          },
+        };
+      })();
+    </script>
+
+    <!-- ── DataProcessor ──────────────────────────────────────────── -->
+    <script>
+      'use strict';
+
+      const DataProcessor = (() => {
+
+        // Safe division — never returns NaN/Infinity
+        function safeDivide(a, b, fallback = 0) {
+          if (!b || b === 0) return fallback;
+          return a / b;
+        }
+
+        // Safely read a nested value without throwing
+        function safe(val, fallback = null) {
+          return (val !== undefined && val !== null && !Number.isNaN(val)) ? val : fallback;
+        }
+
+        // Extract unique deployment IDs from voice-analysis breakdown
+        function extractDeploymentIds(analysis) {
+          const ids = new Set();
+          for (const period of (analysis.breakdown || [])) {
+            for (const d of (period.deployments || [])) {
+              if (d.deploymentId) ids.add(d.deploymentId);
             }
           }
-          if (lastErr) settled[i] = { status: 'rejected', reason: lastErr };
+          return [...ids];
         }
-      };
-      await Promise.all(Array.from({ length: Math.min(CONCURRENCY, total) }, runner));
 
-      const allLogs = [];
-      let failedSlices = 0;
-      settled.forEach((r, i) => {
-        if (r.status === 'fulfilled') {
-          allLogs.push(...r.value);
-        } else {
-          failedSlices++;
-          console.warn(`[Logs] Slice ${i + 1}/${total} FAILED (${windows[i].from.slice(0,16)}):`, r.reason?.message);
+        // Merge same deployment across multiple periods
+        function aggregateDeployments(breakdown) {
+          const map = {};
+          for (const period of (breakdown || [])) {
+            for (const d of (period.deployments || [])) {
+              const id = d.deploymentId;
+              if (!map[id]) {
+                map[id] = {
+                  deploymentId: id,
+                  deploymentName: safe(d.deploymentName, '—'),
+                  workerName: safe(d.workerName, '—'),
+                  workerId: safe(d.workerId, null),
+                  calls: 0,
+                  minutes: 0,
+                  transfers: 0,
+                  transferMinutes: 0,
+                  status: null,  // enriched later from deployment endpoint
+                  topDisposition: null,  // enriched after disposition extraction
+                  dispositionMap: {},
+                };
+              }
+              const m = map[id];
+              m.calls += safe(d.calls, 0);
+              m.minutes += safe(d.minutes, 0);
+              m.transfers += safe(d.transfers, 0);
+              m.transferMinutes += safe(d.transferMinutes, 0);
+            }
+          }
+          // Compute derived fields
+          for (const m of Object.values(map)) {
+            m.averageCallDuration = safeDivide(m.minutes, m.calls);
+            m.transferRate = safeDivide(m.transfers, m.calls);
+            m.completionRate = 1 - safeDivide(m.transfers > m.calls ? m.calls : m.transfers, m.calls);
+          }
+          return map;
         }
-      });
 
-      if (failedSlices > 0) {
-        console.warn(`[Logs] ⚠ ${failedSlices}/${total} slices failed — ${allLogs.length} records returned (INCOMPLETE)`);
-      } else {
-        console.info(`[Logs] ✓ All ${total} slices OK — ${allLogs.length} records`);
-      }
-      allLogs._failedSlices = failedSlices;
-      allLogs._totalSlices  = total;
-      return allLogs;
-    },
-  };
-})();
-</script>
+        // Count dispositions across all call details in a breakdown
+        function extractDispositions(breakdown) {
+          const global = {};
+          const perDeployment = {};
 
-<!-- ── DataProcessor ──────────────────────────────────────────── -->
-<script>
-'use strict';
+          for (const period of (breakdown || [])) {
+            for (const dep of (period.deployments || [])) {
+              const calls = dep.callDetails || dep.calls_details || [];
+              const depId = dep.deploymentId;
+              if (!perDeployment[depId]) perDeployment[depId] = {};
 
-const DataProcessor = (() => {
+              for (const call of calls) {
+                const raw = call?.extractions?.disposition
+                  || call?.extraction?.disposition
+                  || call?.disposition
+                  || null;
+                const disp = raw ? String(raw).trim() : 'Unknown';
+                const bucket = KNOWN_DISPOSITIONS.has(disp) ? disp : 'Other';
 
-  // Safe division — never returns NaN/Infinity
-  function safeDivide(a, b, fallback = 0) {
-    if (!b || b === 0) return fallback;
-    return a / b;
-  }
+                global[bucket] = (global[bucket] || 0) + 1;
+                perDeployment[depId][bucket] = (perDeployment[depId][bucket] || 0) + 1;
+              }
+            }
+          }
+          return { global, perDeployment };
+        }
 
-  // Safely read a nested value without throwing
-  function safe(val, fallback = null) {
-    return (val !== undefined && val !== null && !Number.isNaN(val)) ? val : fallback;
-  }
+        // Derive top disposition label for a map
+        function topDisposition(map) {
+          if (!map || !Object.keys(map).length) return null;
+          return Object.entries(map).sort((a, b) => b[1] - a[1])[0][0];
+        }
 
-  // Extract unique deployment IDs from voice-analysis breakdown
-  function extractDeploymentIds(analysis) {
-    const ids = new Set();
-    for (const period of (analysis.breakdown || [])) {
-      for (const d of (period.deployments || [])) {
-        if (d.deploymentId) ids.add(d.deploymentId);
-      }
-    }
-    return [...ids];
-  }
+        // Completion rate: calls with 0 transfers
+        function calcCompletionRate(summary) {
+          const calls = safe(summary?.totalCalls, 0);
+          const transfers = safe(summary?.totalTransfers, 0);
+          // A call may have multiple transfers; completion = calls never transferred
+          // Approximate: if totalTransfers >= totalCalls, completion ~ 0
+          const approxTransferredCalls = Math.min(transfers, calls);
+          return safeDivide(calls - approxTransferredCalls, calls, 0);
+        }
 
-  // Merge same deployment across multiple periods
-  function aggregateDeployments(breakdown) {
-    const map = {};
-    for (const period of (breakdown || [])) {
-      for (const d of (period.deployments || [])) {
-        const id = d.deploymentId;
-        if (!map[id]) {
-          map[id] = {
-            deploymentId:       id,
-            deploymentName:     safe(d.deploymentName, '—'),
-            workerName:         safe(d.workerName,     '—'),
-            workerId:           safe(d.workerId,       null),
-            calls:              0,
-            minutes:            0,
-            transfers:          0,
-            transferMinutes:    0,
-            status:             null,  // enriched later from deployment endpoint
-            topDisposition:     null,  // enriched after disposition extraction
-            dispositionMap:     {},
+        // Cancellation rate across all dispositions
+        function calcCancellationRate(globalDispositions, totalCalls) {
+          const cancels = globalDispositions['Cancel Tee Time'] || 0;
+          return safeDivide(cancels, totalCalls, 0);
+        }
+
+        // Auth worker stats
+        function calcAuthStatus(aggregated) {
+          const authEntries = Object.values(aggregated)
+            .filter(d => (d.workerName || '').toLowerCase().includes('authentication'));
+          if (!authEntries.length) return null;
+          const totalCalls = authEntries.reduce((s, d) => s + d.calls, 0);
+          const totalTransfers = authEntries.reduce((s, d) => s + d.transfers, 0);
+          const successRate = 1 - safeDivide(totalTransfers, totalCalls);
+          return { totalCalls, totalTransfers, successRate };
+        }
+
+        // Bot response time — returns null if field not present in data
+        function extractBotResponseTime(breakdown) {
+          const times = [];
+          for (const period of (breakdown || [])) {
+            for (const dep of (period.deployments || [])) {
+              const calls = dep.callDetails || dep.calls_details || [];
+              for (const call of calls) {
+                const rt = call?.botResponseTime ?? call?.responseTime ?? call?.avgResponseTime ?? null;
+                if (rt !== null && !isNaN(rt)) times.push(Number(rt));
+              }
+            }
+          }
+          if (!times.length) return null;
+          return safeDivide(times.reduce((a, b) => a + b, 0), times.length);
+        }
+
+        // Main processing entry point
+        function process(analysis, depDetailsMap) {
+          const summary = analysis.summary || {};
+          const breakdown = analysis.breakdown || [];
+
+          const aggregated = aggregateDeployments(breakdown);
+
+          // Enrich from deployment details endpoint
+          for (const [id, dep] of Object.entries(depDetailsMap)) {
+            if (aggregated[id]) {
+              aggregated[id].status = safe(dep.status, '—');
+              aggregated[id].phoneNumber = safe(dep.phoneNumber, null);
+              // Override workerName if available from deployment endpoint
+              if (dep.name) aggregated[id].deploymentName = dep.name;
+            }
+          }
+
+          const { global: globalDisp, perDeployment } = extractDispositions(breakdown);
+
+          // Attach per-deployment disposition data and top disposition
+          for (const [depId, dispMap] of Object.entries(perDeployment)) {
+            if (aggregated[depId]) {
+              aggregated[depId].dispositionMap = dispMap;
+              aggregated[depId].topDisposition = topDisposition(dispMap);
+            }
+          }
+
+          // Re-derive completionRate per deployment using dispositionMap if available
+          for (const dep of Object.values(aggregated)) {
+            dep.completionRate = dep.calls > 0
+              ? 1 - safeDivide(dep.transfers > dep.calls ? dep.calls : dep.transfers, dep.calls)
+              : 0;
+          }
+
+          const completionRate = calcCompletionRate(summary);
+          const cancellationRate = calcCancellationRate(globalDisp, safe(summary.totalCalls, 0));
+          const authStatus = calcAuthStatus(aggregated);
+          const botResponseTime = extractBotResponseTime(breakdown);
+
+          return {
+            summary,
+            breakdown,
+            aggregated,        // { [deploymentId]: enrichedDeployment }
+            globalDisp,        // { dispositionLabel: count }
+            perDeployment,
+            completionRate,
+            cancellationRate,
+            authStatus,
+            botResponseTime,
           };
         }
-        const m = map[id];
-        m.calls           += safe(d.calls,           0);
-        m.minutes         += safe(d.minutes,         0);
-        m.transfers       += safe(d.transfers,       0);
-        m.transferMinutes += safe(d.transferMinutes, 0);
-      }
-    }
-    // Compute derived fields
-    for (const m of Object.values(map)) {
-      m.averageCallDuration = safeDivide(m.minutes, m.calls);
-      m.transferRate        = safeDivide(m.transfers, m.calls);
-      m.completionRate      = 1 - safeDivide(m.transfers > m.calls ? m.calls : m.transfers, m.calls);
-    }
-    return map;
-  }
 
-  // Count dispositions across all call details in a breakdown
-  function extractDispositions(breakdown) {
-    const global = {};
-    const perDeployment = {};
+        return { extractDeploymentIds, process, safeDivide };
+      })();
 
-    for (const period of (breakdown || [])) {
-      for (const dep of (period.deployments || [])) {
-        const calls = dep.callDetails || dep.calls_details || [];
-        const depId = dep.deploymentId;
-        if (!perDeployment[depId]) perDeployment[depId] = {};
+      // Accepted disposition values from API schema
+      const KNOWN_DISPOSITIONS = new Set([
+        'Cancel Tee Time',
+        'Booking - Incomplete',
+        'General Q&A/Other',
+        'Check Tee Time Availability',
+        'Transfer to Golf Shop',
+        'Booking - Successful',
+        'Modify Tee Time',
+        'Dead Air',
+        'Requesting Golf Shop',
+        'Unknown',
+        'Other',
+      ]);
+    </script>
 
-        for (const call of calls) {
-          const raw = call?.extractions?.disposition
-                   || call?.extraction?.disposition
-                   || call?.disposition
-                   || null;
-          const disp = raw ? String(raw).trim() : 'Unknown';
-          const bucket = KNOWN_DISPOSITIONS.has(disp) ? disp : 'Other';
+    <!-- ── Charts ────────────────────────────────────────────────── -->
+    <script>
+      'use strict';
 
-          global[bucket]         = (global[bucket]         || 0) + 1;
-          perDeployment[depId][bucket] = (perDeployment[depId][bucket] || 0) + 1;
+      const Charts = (() => {
+        const instances = {};
+
+        // Global default font
+        if (typeof Chart !== 'undefined') {
+          Chart.defaults.font.family = "'InterDisplay', 'Inter', sans-serif";
         }
-      }
-    }
-    return { global, perDeployment };
-  }
 
-  // Derive top disposition label for a map
-  function topDisposition(map) {
-    if (!map || !Object.keys(map).length) return null;
-    return Object.entries(map).sort((a, b) => b[1] - a[1])[0][0];
-  }
+        const PALETTE = [
+          '#1863dc', '#a7c957', '#17171c', '#003c33',
+          '#071829', '#75758a', '#93939f', '#eeece7',
+        ];
 
-  // Completion rate: calls with 0 transfers
-  function calcCompletionRate(summary) {
-    const calls     = safe(summary?.totalCalls,     0);
-    const transfers = safe(summary?.totalTransfers, 0);
-    // A call may have multiple transfers; completion = calls never transferred
-    // Approximate: if totalTransfers >= totalCalls, completion ~ 0
-    const approxTransferredCalls = Math.min(transfers, calls);
-    return safeDivide(calls - approxTransferredCalls, calls, 0);
-  }
-
-  // Cancellation rate across all dispositions
-  function calcCancellationRate(globalDispositions, totalCalls) {
-    const cancels = globalDispositions['Cancel Tee Time'] || 0;
-    return safeDivide(cancels, totalCalls, 0);
-  }
-
-  // Auth worker stats
-  function calcAuthStatus(aggregated) {
-    const authEntries = Object.values(aggregated)
-      .filter(d => (d.workerName || '').toLowerCase().includes('authentication'));
-    if (!authEntries.length) return null;
-    const totalCalls     = authEntries.reduce((s, d) => s + d.calls, 0);
-    const totalTransfers = authEntries.reduce((s, d) => s + d.transfers, 0);
-    const successRate    = 1 - safeDivide(totalTransfers, totalCalls);
-    return { totalCalls, totalTransfers, successRate };
-  }
-
-  // Bot response time — returns null if field not present in data
-  function extractBotResponseTime(breakdown) {
-    const times = [];
-    for (const period of (breakdown || [])) {
-      for (const dep of (period.deployments || [])) {
-        const calls = dep.callDetails || dep.calls_details || [];
-        for (const call of calls) {
-          const rt = call?.botResponseTime ?? call?.responseTime ?? call?.avgResponseTime ?? null;
-          if (rt !== null && !isNaN(rt)) times.push(Number(rt));
+        function destroy(id) {
+          if (instances[id]) { instances[id].destroy(); delete instances[id]; }
         }
-      }
-    }
-    if (!times.length) return null;
-    return safeDivide(times.reduce((a, b) => a + b, 0), times.length);
-  }
 
-  // Main processing entry point
-  function process(analysis, depDetailsMap) {
-    const summary    = analysis.summary    || {};
-    const breakdown  = analysis.breakdown  || [];
+        function destroyAll() {
+          Object.keys(instances).forEach(destroy);
+        }
 
-    const aggregated = aggregateDeployments(breakdown);
+        function baseOpts(extra = {}, isDark = false) {
+          const textColor = '#93939f'; // Muted Slate for all labels
+          const gridColor = isDark ? 'rgba(255, 255, 255, 0.03)' : '#f2f2f2'; // Card Border
+          const borderColor = isDark ? 'rgba(255, 255, 255, 0.05)' : '#e5e7eb'; // Border Light
 
-    // Enrich from deployment details endpoint
-    for (const [id, dep] of Object.entries(depDetailsMap)) {
-      if (aggregated[id]) {
-        aggregated[id].status        = safe(dep.status, '—');
-        aggregated[id].phoneNumber   = safe(dep.phoneNumber, null);
-        // Override workerName if available from deployment endpoint
-        if (dep.name) aggregated[id].deploymentName = dep.name;
-      }
-    }
+          return {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                labels: { color: textColor, font: { size: 11, family: "'InterDisplay', sans-serif" }, boxWidth: 12, padding: 12 },
+              },
+              tooltip: {
+                backgroundColor: isDark ? '#17171c' : '#212121', // Near-Black or Ink
+                borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : '#d9d9dd', // Hairline
+                borderWidth: 1,
+                titleColor: '#ffffff',
+                bodyColor: '#eeece7', // Soft Stone
+                padding: 10,
+                bodyFont: { family: "'InterDisplay', sans-serif" },
+                titleFont: { family: "'InterDisplay', sans-serif" },
+              },
+            },
+            scales: {
+              x: {
+                ticks: { color: textColor, font: { size: 11, family: "'InterDisplay', sans-serif" } },
+                grid: { color: gridColor },
+                border: { color: borderColor },
+              },
+              y: {
+                ticks: { color: textColor, font: { size: 11, family: "'InterDisplay', sans-serif" } },
+                grid: { color: gridColor },
+                border: { color: borderColor },
+                beginAtZero: true,
+              },
+            },
+            ...extra,
+          };
+        }
 
-    const { global: globalDisp, perDeployment } = extractDispositions(breakdown);
+        function showChart(skelId, wrapId) {
+          const skel = document.getElementById(skelId);
+          const wrap = document.getElementById(wrapId);
+          if (skel) skel.style.display = 'none';
+          if (wrap) wrap.style.display = 'block';
+        }
 
-    // Attach per-deployment disposition data and top disposition
-    for (const [depId, dispMap] of Object.entries(perDeployment)) {
-      if (aggregated[depId]) {
-        aggregated[depId].dispositionMap  = dispMap;
-        aggregated[depId].topDisposition  = topDisposition(dispMap);
-      }
-    }
+        // Calls & Transfers grouped bar
+        function buildCallsBar(breakdown) {
+          showChart('callsChartSkel', 'callsChartWrap');
+          const labels = breakdown.map(p => p.period);
+          const el = document.getElementById('callsChartSub');
+          if (el) el.textContent = labels.join(' · ');
+          destroy('callsChart');
+          instances['callsChart'] = new Chart(document.getElementById('callsChart'), {
+            type: 'bar',
+            data: {
+              labels,
+              datasets: [
+                { label: 'Calls', data: breakdown.map(p => p.totalCalls ?? 0), backgroundColor: '#003c33bb', borderColor: '#003c33', borderWidth: 1, borderRadius: 4 },
+                { label: 'Transfers', data: breakdown.map(p => p.totalTransfers ?? 0), backgroundColor: '#17171cbb', borderColor: '#17171c', borderWidth: 1, borderRadius: 4 },
+              ],
+            },
+            options: baseOpts(),
+          });
+        }
 
-    // Re-derive completionRate per deployment using dispositionMap if available
-    for (const dep of Object.values(aggregated)) {
-      dep.completionRate = dep.calls > 0
-        ? 1 - safeDivide(dep.transfers > dep.calls ? dep.calls : dep.transfers, dep.calls)
-        : 0;
-    }
+        // Disposition donut
+        function buildDispositionDonut(globalDisp) {
+          showChart('dispositionSkel', 'dispositionWrap');
+          const entries = Object.entries(globalDisp).sort((a, b) => b[1] - a[1]);
+          if (!entries.length) {
+            document.getElementById('dispositionWrap').innerHTML =
+              '<p class="text-slate-500 text-xs text-center pt-20">No disposition data (call details may not be available for this date range)</p>';
+            return;
+          }
+          destroy('dispositionChart');
+          instances['dispositionChart'] = new Chart(document.getElementById('dispositionChart'), {
+            type: 'doughnut',
+            data: {
+              labels: entries.map(([k]) => k),
+              datasets: [{
+                data: entries.map(([, v]) => v),
+                backgroundColor: PALETTE.slice(0, entries.length).map(c => c + 'cc'),
+                borderColor: PALETTE.slice(0, entries.length),
+                borderWidth: 1,
+              }],
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              cutout: '60%',
+              plugins: {
+                legend: {
+                  position: 'right',
+                  labels: { color: '#94a3b8', font: { size: 10 }, boxWidth: 10, padding: 8 },
+                },
+                tooltip: {
+                  backgroundColor: '#1e293b', borderColor: '#e2e8f0', borderWidth: 1,
+                  titleColor: '#f8fafc', bodyColor: '#cbd5e1', padding: 10,
+                  callbacks: { label: ctx => ` ${ctx.label}: ${fmt(ctx.raw)} calls` },
+                },
+              },
+            },
+          });
+        }
 
-    const completionRate   = calcCompletionRate(summary);
-    const cancellationRate = calcCancellationRate(globalDisp, safe(summary.totalCalls, 0));
-    const authStatus       = calcAuthStatus(aggregated);
-    const botResponseTime  = extractBotResponseTime(breakdown);
+        // Worker horizontal bar
+        function buildWorkerBar(aggregated) {
+          showChart('workerSkel', 'workerWrap');
+          const workers = {};
+          for (const d of Object.values(aggregated)) {
+            const name = d.workerName || '';
+            const depName = d.deploymentName || '';
+            const combined = (name + ' ' + depName).toLowerCase();
+            if (combined.includes('authentication') || (combined.includes('cancellation') && combined.includes('v2'))) continue;
+            workers[name] = (workers[name] || 0) + d.calls;
+          }
+          const sorted = Object.entries(workers).sort((a, b) => b[1] - a[1]);
+          destroy('workerChart');
 
-    return {
-      summary,
-      breakdown,
-      aggregated,        // { [deploymentId]: enrichedDeployment }
-      globalDisp,        // { dispositionLabel: count }
-      perDeployment,
-      completionRate,
-      cancellationRate,
-      authStatus,
-      botResponseTime,
-    };
-  }
+          instances['workerChart'] = new Chart(document.getElementById('workerChart'), {
+            type: 'bar',
+            data: {
+              labels: sorted.map(([k]) => k),
+              datasets: [{
+                data: sorted.map(([, v]) => v),
+                backgroundColor: '#a7c957',
+                borderColor: '#a7c957',
+                borderWidth: 1,
+                borderRadius: 4,
+              }],
+            },
+            options: {
+              ...baseOpts({ indexAxis: 'y' }),
+              plugins: {
+                legend: { display: false },
+                tooltip: {
+                  backgroundColor: '#1e293b', borderColor: '#e2e8f0', borderWidth: 1,
+                  titleColor: '#f8fafc', bodyColor: '#cbd5e1', padding: 10,
+                },
+              },
+            },
+          });
+        }
 
-  return { extractDeploymentIds, process, safeDivide };
-})();
+        // Transfer to human — line trend
+        function buildTransferLine(breakdown) {
+          showChart('transferSkel', 'transferWrap');
+          destroy('transferChart');
+          instances['transferChart'] = new Chart(document.getElementById('transferChart'), {
+            type: 'line',
+            data: {
+              labels: breakdown.map(p => p.period),
+              datasets: [{
+                label: 'Transfer Rate',
+                data: breakdown.map(p => {
+                  const calls = p.totalCalls || 0;
+                  const xfers = p.totalTransfers || 0;
+                  return calls ? +(xfers / calls).toFixed(3) : 0;
+                }),
+                borderColor: '#003c33',
+                backgroundColor: '#003c3320',
+                borderWidth: 2,
+                pointBackgroundColor: '#003c33',
+                fill: true,
+                tension: 0.4,
+              }],
+            },
+            options: {
+              ...baseOpts(),
+              plugins: {
+                legend: { labels: { color: '#94a3b8', font: { size: 11 }, boxWidth: 12 } },
+                tooltip: {
+                  backgroundColor: '#1e293b', borderColor: '#e2e8f0', borderWidth: 1,
+                  titleColor: '#f8fafc', bodyColor: '#cbd5e1', padding: 10,
+                  callbacks: { label: ctx => ` Transfer Rate: ${ctx.raw}x` },
+                },
+              },
+            },
+          });
+        }
 
-// Accepted disposition values from API schema
-const KNOWN_DISPOSITIONS = new Set([
-  'Cancel Tee Time',
-  'Booking - Incomplete',
-  'General Q&A/Other',
-  'Check Tee Time Availability',
-  'Transfer to Golf Shop',
-  'Booking - Successful',
-  'Modify Tee Time',
-  'Dead Air',
-  'Requesting Golf Shop',
-  'Unknown',
-  'Other',
-]);
-</script>
+        // Cancellation rate horizontal bar by agent
+        function buildCancellationBar(aggregated) {
+          showChart('cancelSkel', 'cancelWrap');
+          const data = Object.values(aggregated)
+            .filter(d => {
+              if (d.calls <= 0) return false;
+              const name = d.workerName || '';
+              const depName = d.deploymentName || '';
+              const combined = (name + ' ' + depName).toLowerCase();
+              if (combined.includes('authentication') || (combined.includes('cancellation') && combined.includes('v2'))) return false;
+              return true;
+            })
+            .map(d => {
+              const cancels = d.dispositionMap?.['Cancel Tee Time'] || 0;
+              return { label: d.workerName, rate: DataProcessor.safeDivide(cancels, d.calls) };
+            })
+            .filter(d => d.rate > 0)
+            .sort((a, b) => b.rate - a.rate)
+            .slice(0, 8);
 
-<!-- ── Charts ────────────────────────────────────────────────── -->
-<script>
-'use strict';
+          destroy('cancelChart');
+          if (!data.length) {
+            document.getElementById('cancelWrap').innerHTML =
+              '<p class="text-slate-500 text-xs text-center pt-20">No cancellation data in this range</p>';
+            return;
+          }
+          instances['cancelChart'] = new Chart(document.getElementById('cancelChart'), {
+            type: 'bar',
+            data: {
+              labels: data.map(d => d.label),
+              datasets: [{
+                label: 'Cancellation Rate',
+                data: data.map(d => +(d.rate * 100).toFixed(1)),
+                backgroundColor: '#003c33bb',
+                borderColor: '#003c33',
+                borderWidth: 1, borderRadius: 4,
+              }],
+            },
+            options: {
+              ...baseOpts({ indexAxis: 'y' }),
+              plugins: {
+                legend: { display: false },
+                tooltip: {
+                  backgroundColor: '#1e293b', borderColor: '#e2e8f0', borderWidth: 1,
+                  titleColor: '#f8fafc', bodyColor: '#cbd5e1', padding: 10,
+                  callbacks: { label: ctx => ` ${ctx.raw}% cancellation rate` },
+                },
+              },
+            },
+          });
+        }
 
-const Charts = (() => {
-  const instances = {};
+        return { buildCallsBar, buildDispositionDonut, buildWorkerBar, buildTransferLine, buildCancellationBar, destroyAll };
+      })();
+    </script>
 
-  const PALETTE = [
-    '#6366f1','#22d3ee','#4ade80','#fbbf24',
-    '#fb7185','#a78bfa','#fb923c','#2dd4bf',
-    '#f472b6','#84cc16','#38bdf8','#facc15',
-  ];
+    <!-- ── UI ────────────────────────────────────────────────────── -->
+    <script>
+      'use strict';
 
-  function destroy(id) {
-    if (instances[id]) { instances[id].destroy(); delete instances[id]; }
-  }
+      const UI = (() => {
 
-  function destroyAll() {
-    Object.keys(instances).forEach(destroy);
-  }
+        // ── KPI Cards ────────────────────────────────────────────────
+        function kpiCard({ label, valLeft, valRight, subLeft, subRight, iconName }) {
+          const iconSvg = iconName ? icon(iconName, 'w-6 h-6 text-white') : '';
+          return `
+      <div class="bg-white rounded-[22px] border border-cohere-borderLight shadow-sm overflow-hidden flex flex-col h-full fade-in group transition-all hover:shadow-md">
+        <!-- Header -->
+        <div class="bg-cohere-blue px-6 py-5 flex items-center justify-between">
+          <span class="text-[14px] font-display font-bold text-white tracking-widest">${label}</span>
+          <div class="flex items-center justify-center">
+            ${iconSvg}
+          </div>
+        </div>
+        
+        <!-- Body -->
+        <div class="p-6 flex-1 flex flex-col justify-center text-center">
+          <p class="text-[10px] text-cohere-slateMuted font-medium mb-2">Voice Analysis</p>
+          <p class="text-4xl font-display font-bold text-cohere-coral tabular leading-none">${valLeft}</p>
+          <p class="text-[10px] text-cohere-slateMuted mt-2 font-medium">${subLeft || ''}</p>
+        </div>
 
-  function baseOpts(extra = {}) {
-    return {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: {
-          labels: { color: '#94a3b8', font: { size: 11 }, boxWidth: 12, padding: 12 },
-        },
-        tooltip: {
-          backgroundColor: '#1e293b',
-          borderColor: '#e2e8f0',
-          borderWidth: 1,
-          titleColor: '#f8fafc',
-          bodyColor: '#cbd5e1',
-          padding: 10,
-        },
-      },
-      scales: {
-        x: {
-          ticks:  { color: '#94a3b8', font: { size: 11 } },
-          grid:   { color: '#f1f5f9' },
-          border: { color: '#e2e8f0' },
-        },
-        y: {
-          ticks:  { color: '#94a3b8', font: { size: 11 } },
-          grid:   { color: '#f1f5f9' },
-          border: { color: '#e2e8f0' },
-          beginAtZero: true,
-        },
-      },
-      ...extra,
-    };
-  }
-
-  function showChart(skelId, wrapId) {
-    const skel = document.getElementById(skelId);
-    const wrap = document.getElementById(wrapId);
-    if (skel) skel.style.display = 'none';
-    if (wrap) wrap.style.display = 'block';
-  }
-
-  // Calls & Transfers grouped bar
-  function buildCallsBar(breakdown) {
-    showChart('callsChartSkel', 'callsChartWrap');
-    const labels = breakdown.map(p => p.period);
-    const el = document.getElementById('callsChartSub');
-    if (el) el.textContent = labels.join(' · ');
-    destroy('callsChart');
-    instances['callsChart'] = new Chart(document.getElementById('callsChart'), {
-      type: 'bar',
-      data: {
-        labels,
-        datasets: [
-          { label: 'Calls',     data: breakdown.map(p => p.totalCalls     ?? 0), backgroundColor: '#6366f1bb', borderColor: '#6366f1', borderWidth: 1, borderRadius: 4 },
-          { label: 'Transfers', data: breakdown.map(p => p.totalTransfers ?? 0), backgroundColor: '#fbbf24bb', borderColor: '#fbbf24', borderWidth: 1, borderRadius: 4 },
-        ],
-      },
-      options: baseOpts(),
-    });
-  }
-
-  // Disposition donut
-  function buildDispositionDonut(globalDisp) {
-    showChart('dispositionSkel', 'dispositionWrap');
-    const entries = Object.entries(globalDisp).sort((a, b) => b[1] - a[1]);
-    if (!entries.length) {
-      document.getElementById('dispositionWrap').innerHTML =
-        '<p class="text-slate-500 text-xs text-center pt-20">No disposition data (call details may not be available for this date range)</p>';
-      return;
-    }
-    destroy('dispositionChart');
-    instances['dispositionChart'] = new Chart(document.getElementById('dispositionChart'), {
-      type: 'doughnut',
-      data: {
-        labels:   entries.map(([k]) => k),
-        datasets: [{
-          data:            entries.map(([, v]) => v),
-          backgroundColor: PALETTE.slice(0, entries.length).map(c => c + 'cc'),
-          borderColor:     PALETTE.slice(0, entries.length),
-          borderWidth: 1,
-        }],
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        cutout: '60%',
-        plugins: {
-          legend: {
-            position: 'right',
-            labels: { color: '#94a3b8', font: { size: 10 }, boxWidth: 10, padding: 8 },
-          },
-          tooltip: {
-            backgroundColor: '#1e293b', borderColor: '#e2e8f0', borderWidth: 1,
-            titleColor: '#f8fafc', bodyColor: '#cbd5e1', padding: 10,
-            callbacks: { label: ctx => ` ${ctx.label}: ${fmt(ctx.raw)} calls` },
-          },
-        },
-      },
-    });
-  }
-
-  // Worker horizontal bar
-  function buildWorkerBar(aggregated) {
-    showChart('workerSkel', 'workerWrap');
-    const workers = {};
-    for (const d of Object.values(aggregated)) {
-      workers[d.workerName] = (workers[d.workerName] || 0) + d.calls;
-    }
-    const sorted = Object.entries(workers).sort((a, b) => b[1] - a[1]);
-    destroy('workerChart');
-    instances['workerChart'] = new Chart(document.getElementById('workerChart'), {
-      type: 'bar',
-      data: {
-        labels: sorted.map(([k]) => k),
-        datasets: [{
-          data:            sorted.map(([, v]) => v),
-          backgroundColor: PALETTE.slice(0, sorted.length).map(c => c + 'cc'),
-          borderColor:     PALETTE.slice(0, sorted.length),
-          borderWidth: 1, borderRadius: 4,
-        }],
-      },
-      options: {
-        ...baseOpts({ indexAxis: 'y' }),
-        plugins: {
-          legend: { display: false },
-          tooltip: {
-            backgroundColor: '#1e293b', borderColor: '#e2e8f0', borderWidth: 1,
-            titleColor: '#f8fafc', bodyColor: '#cbd5e1', padding: 10,
-          },
-        },
-      },
-    });
-  }
-
-  // Transfer to human — line trend
-  function buildTransferLine(breakdown) {
-    showChart('transferSkel', 'transferWrap');
-    destroy('transferChart');
-    instances['transferChart'] = new Chart(document.getElementById('transferChart'), {
-      type: 'line',
-      data: {
-        labels: breakdown.map(p => p.period),
-        datasets: [{
-          label: 'Transfer Rate',
-          data: breakdown.map(p => {
-            const calls = p.totalCalls || 0;
-            const xfers = p.totalTransfers || 0;
-            return calls ? +(xfers / calls).toFixed(3) : 0;
-          }),
-          borderColor: '#fb7185',
-          backgroundColor: '#fb718520',
-          borderWidth: 2,
-          pointBackgroundColor: '#fb7185',
-          fill: true,
-          tension: 0.4,
-        }],
-      },
-      options: {
-        ...baseOpts(),
-        plugins: {
-          legend: { labels: { color: '#94a3b8', font: { size: 11 }, boxWidth: 12 } },
-          tooltip: {
-            backgroundColor: '#1e293b', borderColor: '#e2e8f0', borderWidth: 1,
-            titleColor: '#f8fafc', bodyColor: '#cbd5e1', padding: 10,
-            callbacks: { label: ctx => ` Transfer Rate: ${ctx.raw}x` },
-          },
-        },
-      },
-    });
-  }
-
-  // Cancellation rate horizontal bar by agent
-  function buildCancellationBar(aggregated) {
-    showChart('cancelSkel', 'cancelWrap');
-    const data = Object.values(aggregated)
-      .filter(d => d.calls > 0)
-      .map(d => {
-        const cancels = d.dispositionMap?.['Cancel Tee Time'] || 0;
-        return { label: d.workerName, rate: DataProcessor.safeDivide(cancels, d.calls) };
-      })
-      .filter(d => d.rate > 0)
-      .sort((a, b) => b.rate - a.rate)
-      .slice(0, 8);
-
-    destroy('cancelChart');
-    if (!data.length) {
-      document.getElementById('cancelWrap').innerHTML =
-        '<p class="text-slate-500 text-xs text-center pt-20">No cancellation data in this range</p>';
-      return;
-    }
-    instances['cancelChart'] = new Chart(document.getElementById('cancelChart'), {
-      type: 'bar',
-      data: {
-        labels: data.map(d => d.label),
-        datasets: [{
-          label: 'Cancellation Rate',
-          data: data.map(d => +(d.rate * 100).toFixed(1)),
-          backgroundColor: '#fb7185bb',
-          borderColor: '#fb7185',
-          borderWidth: 1, borderRadius: 4,
-        }],
-      },
-      options: {
-        ...baseOpts({ indexAxis: 'y' }),
-        plugins: {
-          legend: { display: false },
-          tooltip: {
-            backgroundColor: '#1e293b', borderColor: '#e2e8f0', borderWidth: 1,
-            titleColor: '#f8fafc', bodyColor: '#cbd5e1', padding: 10,
-            callbacks: { label: ctx => ` ${ctx.raw}% cancellation rate` },
-          },
-        },
-      },
-    });
-  }
-
-  return { buildCallsBar, buildDispositionDonut, buildWorkerBar, buildTransferLine, buildCancellationBar, destroyAll };
-})();
-</script>
-
-<!-- ── UI ────────────────────────────────────────────────────── -->
-<script>
-'use strict';
-
-const UI = (() => {
-
-  // ── KPI Cards ────────────────────────────────────────────────
-  function kpiCard({ label, value, sub, accent }) {
-    return `
-      <div class="kpi-card bg-white rounded-xl p-5 shadow-sm border border-gray-200 ${accent.border} fade-in">
-        <p class="text-xs text-gray-500 uppercase tracking-wider font-semibold leading-none">${esc(label)}</p>
-        <p class="text-2xl font-bold text-gray-900 tabular leading-none mt-2">${value}</p>
-        ${sub ? `<p class="text-xs text-gray-400 mt-1.5">${sub}</p>` : ''}
+        <!-- Bottom Stripe -->
+        <div class="h-1.5 bg-gradient-to-r from-cohere-blue to-cohere-coral"></div>
       </div>`;
-  }
+        }
 
-  const ICONS = {
-    phone:  `<svg class="w-4 h-4 {c}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>`,
-    clock:  `<svg class="w-4 h-4 {c}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>`,
-    trend:  `<svg class="w-4 h-4 {c}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>`,
-    xfer:   `<svg class="w-4 h-4 {c}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>`,
-    check:  `<svg class="w-4 h-4 {c}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>`,
-    cancel: `<svg class="w-4 h-4 {c}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>`,
-  };
+        const ICONS = {
+          phone: `<svg class="w-4 h-4 {c}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>`,
+          clock: `<svg class="w-4 h-4 {c}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>`,
+          trend: `<svg class="w-4 h-4 {c}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>`,
+          xfer: `<svg class="w-4 h-4 {c}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>`,
+          check: `<svg class="w-4 h-4 {c}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>`,
+          cancel: `<svg class="w-4 h-4 {c}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>`,
+        };
 
-  function icon(name, colorClass) {
-    return ICONS[name]?.replace('{c}', colorClass) ?? '';
-  }
+        function icon(name, colorClass) {
+          return ICONS[name]?.replace('{c}', colorClass || 'w-4 h-4') ?? '';
+        }
 
-  function renderKPIs(data) {
-    const s     = data.summary;
-    const cards = [
-      kpiCard({
-        label: 'Total Calls', value: fmt(s.totalCalls),
-        sub: `${fmtDate(s.dateRange?.start)} – ${fmtDate(s.dateRange?.end)}`,
-        accent: { border: 'border-l-indigo-500' },
-      }),
-      kpiCard({
-        label: 'Voice Minutes', value: fmt(s.totalMinutes, 1),
-        sub: `${fmt(s.totalTransferMinutes, 1)} transfer min`,
-        accent: { border: 'border-l-cyan-500' },
-      }),
-      kpiCard({
-        label: 'Avg Duration', value: (s.averageCallDuration ?? 0).toFixed(2) + ' min',
-        sub: 'per call',
-        accent: { border: 'border-l-emerald-500' },
-      }),
-    ];
-    const kpiDebugText = `POST /api/voice-analysis  ·  ${fmtDate(s.dateRange?.start)} – ${fmtDate(s.dateRange?.end)}`;
-    document.getElementById('kpiSection').innerHTML =
-      `<p class="col-span-full text-xs text-gray-300 font-mono -mb-2">${kpiDebugText}</p>` + cards.join('');
-  }
+        function renderKPIs(data) {
+          const s = data.summary;
+          const cards = [
+            kpiCard({
+              label: 'Total Calls',
+              valLeft: fmt(s.totalCalls),
+              valRight: fmt(s.totalCalls),
+              subLeft: 'calls processed',
+              subRight: 'entries logged',
+              iconName: 'phone',
+            }),
+            kpiCard({
+              label: 'Total Minutes',
+              valLeft: fmt(s.totalMinutes, 1),
+              valRight: fmt(s.totalMinutes, 1),
+              subLeft: 'minutes analyzed',
+              subRight: 'minutes logged',
+              iconName: 'clock',
+            }),
+            kpiCard({
+              label: 'Avg Duration',
+              valLeft: (s.averageCallDuration ?? 0).toFixed(2),
+              valRight: (s.averageCallDuration ?? 0).toFixed(2),
+              subLeft: 'mins per call',
+              subRight: 'mins per call',
+              iconName: 'trend',
+            }),
+          ];
+          document.getElementById('kpiSection').innerHTML = cards.join('');
+        }
 
-  // ── Auth & Bot RT panels ──────────────────────────────────────
-  function renderAuthStatus(authStatus) {
-    const el = document.getElementById('authContent');
-    if (!el) return;
-    if (!authStatus) {
-      el.className = '';
-      el.innerHTML = noDataMsg('No authentication worker calls in this date range');
-      return;
-    }
-    el.className = 'fade-in';
-    el.innerHTML = `
+        // ── Auth & Bot RT panels ──────────────────────────────────────
+        function renderAuthStatus(authStatus) {
+          const el = document.getElementById('authContent');
+          if (!el) return;
+          if (!authStatus) {
+            el.className = '';
+            el.innerHTML = noDataMsg('No authentication worker calls in this date range');
+            return;
+          }
+          el.className = 'fade-in';
+          el.innerHTML = `
       <div class="grid grid-cols-3 gap-4 mt-1">
-        <div class="bg-gray-50 border border-gray-100 rounded-lg p-4 text-center">
-          <p class="text-2xl font-bold text-gray-900 tabular">${fmt(authStatus.totalCalls)}</p>
-          <p class="text-xs text-gray-400 mt-1">Auth Calls</p>
+        <div class="bg-cohere-stone border border-cohere-borderLight rounded-[16px] p-6 text-center">
+          <p class="text-3xl font-display font-medium text-cohere-black tabular">${fmt(authStatus.totalCalls)}</p>
+          <p class="text-[13px] text-cohere-slateMuted font-mono mt-2">Auth Calls</p>
         </div>
-        <div class="bg-gray-50 border border-gray-100 rounded-lg p-4 text-center">
-          <p class="text-2xl font-bold tabular ${authStatus.successRate >= 0.8 ? 'text-emerald-600' : 'text-amber-500'}">${pct(authStatus.successRate)}</p>
-          <p class="text-xs text-gray-400 mt-1">Success Rate</p>
+        <div class="bg-cohere-stone border border-cohere-borderLight rounded-[16px] p-6 text-center">
+          <p class="text-3xl font-display font-medium tabular ${authStatus.successRate >= 0.8 ? 'text-cohere-green' : 'text-cohere-coral'}">${pct(authStatus.successRate)}</p>
+          <p class="text-[13px] text-cohere-slateMuted font-mono mt-2">Success Rate</p>
         </div>
-        <div class="bg-gray-50 border border-gray-100 rounded-lg p-4 text-center">
-          <p class="text-2xl font-bold text-rose-500 tabular">${fmt(authStatus.totalTransfers)}</p>
-          <p class="text-xs text-gray-400 mt-1">Escalated</p>
+        <div class="bg-cohere-stone border border-cohere-borderLight rounded-[16px] p-6 text-center">
+          <p class="text-3xl font-display font-medium text-cohere-coral tabular">${fmt(authStatus.totalTransfers)}</p>
+          <p class="text-[13px] text-cohere-slateMuted font-mono mt-2">Escalated</p>
         </div>
       </div>`;
-  }
+        }
 
-  function renderBotResponseTime(botRt) {
-    const el = document.getElementById('botRtContent');
-    if (!el) return;
-    el.className = 'fade-in';
-    if (botRt === null) {
-      el.innerHTML = `
+        function renderBotResponseTime(botRt) {
+          const el = document.getElementById('botRtContent');
+          if (!el) return;
+          el.className = 'fade-in';
+          if (botRt === null) {
+            el.innerHTML = `
         <div class="flex flex-col items-center justify-center h-36 gap-2">
-          <p class="text-gray-500 font-medium text-sm">Not available from current API</p>
-          <p class="text-xs text-gray-400 text-center max-w-xs">
-            The <code class="bg-gray-100 px-1 rounded text-gray-600">botResponseTime</code> field is not present
+          <p class="text-cohere-slateMuted font-medium text-sm">Not available from current API</p>
+          <p class="text-xs  text-center max-w-xs">
+            The <code class="bg-cohere-borderLight px-1 rounded text-cohere-slate">botResponseTime</code> field is not present
             in the current API response.
           </p>
         </div>`;
-    } else {
-      el.innerHTML = `
+          } else {
+            el.innerHTML = `
         <div class="flex items-center justify-center h-36 gap-3">
           <p class="text-5xl font-bold text-white tabular">${botRt.toFixed(2)}</p>
           <div>
-            <p class="text-sm text-gray-400">seconds</p>
-            <p class="text-xs text-gray-400">avg response latency</p>
+            <p class="text-sm ">seconds</p>
+            <p class="text-xs ">avg response latency</p>
           </div>
         </div>`;
-    }
-  }
+          }
+        }
 
-  // ── Table ─────────────────────────────────────────────────────
-  let _allRows    = [];
-  let _filtered   = [];
-  let _sortKey    = 'calls';
-  let _sortAsc    = false;
+        // ── Table ─────────────────────────────────────────────────────
+        let _allRows = [];
+        let _filtered = [];
+        let _sortKey = 'calls';
+        let _sortAsc = false;
 
-  function renderTable(aggregated) {
-    _allRows  = Object.values(aggregated);
-    _filtered = [..._allRows];
-    _sortKey  = 'calls';
-    _sortAsc  = false;
-    _drawTable();
-  }
+        function renderTable(aggregated) {
+          const skel = document.getElementById('tableSkel');
+          const wrap = document.getElementById('tableWrap');
+          if (skel) skel.style.display = 'none';
+          if (wrap) wrap.style.display = 'block';
 
-  function filterTable(q) {
-    const query = (q || '').toLowerCase();
-    _filtered = query
-      ? _allRows.filter(d =>
-          (d.workerName     || '').toLowerCase().includes(query) ||
-          (d.deploymentName || '').toLowerCase().includes(query))
-      : [..._allRows];
-    _drawTable();
-  }
+          _allRows = Object.values(aggregated).filter(d => {
+            const name = d.workerName || '';
+            const depName = d.deploymentName || '';
+            const combined = (name + ' ' + depName).toLowerCase();
+            return !combined.includes('authentication') && !(combined.includes('cancellation') && combined.includes('v2'));
+          });
+          _filtered = [..._allRows];
+          _sortKey = 'calls';
+          _sortAsc = false;
+          _drawTable();
+        }
 
-  function _sortBy(key) {
-    _sortAsc = _sortKey === key ? !_sortAsc : false;
-    _sortKey = key;
-    // Update arrows
-    document.querySelectorAll('.th-sort').forEach(th => {
-      const col    = th.dataset.col;
-      const active = col === key;
-      th.innerHTML = th.innerHTML.replace(/\s*[↕↑↓]$/, '');
-      th.innerHTML += active ? (_sortAsc ? ' ↑' : ' ↓') : ' ↕';
-      th.classList.toggle('text-indigo-400', active);
-      th.classList.toggle('text-slate-400',  !active);
-    });
-    _drawTable();
-  }
+        function filterTable(q) {
+          const query = (q || '').toLowerCase();
+          _filtered = query
+            ? _allRows.filter(d =>
+              (d.workerName || '').toLowerCase().includes(query) ||
+              (d.deploymentName || '').toLowerCase().includes(query))
+            : [..._allRows];
+          _drawTable();
+        }
 
-  function _drawTable() {
-    const rows = [..._filtered].sort((a, b) => {
-      const va = a[_sortKey] ?? '', vb = b[_sortKey] ?? '';
-      const cmp = typeof va === 'string' ? va.localeCompare(vb) : va - vb;
-      return _sortAsc ? cmp : -cmp;
-    });
+        function _sortBy(key) {
+          _sortAsc = _sortKey === key ? !_sortAsc : false;
+          _sortKey = key;
+          // Update arrows
+          document.querySelectorAll('.th-sort').forEach(th => {
+            const col = th.dataset.col;
+            const active = col === key;
+            th.innerHTML = th.innerHTML.replace(/\s*[↕↑↓]$/, '');
+            th.innerHTML += active ? (_sortAsc ? ' ↑' : ' ↓') : ' ↕';
+            th.classList.toggle('text-cohere-black', active);
+            th.classList.toggle('text-cohere-slateMuted', !active);
+          });
+          _drawTable();
+        }
 
-    document.getElementById('tableCount').textContent = `${rows.length} row${rows.length !== 1 ? 's' : ''}`;
+        function _drawTable() {
+          const rows = [..._filtered].sort((a, b) => {
+            const va = a[_sortKey] ?? '', vb = b[_sortKey] ?? '';
+            const cmp = typeof va === 'string' ? va.localeCompare(vb) : va - vb;
+            return _sortAsc ? cmp : -cmp;
+          });
 
-    const tbody = document.getElementById('tableBody');
-    if (!rows.length) {
-      tbody.innerHTML = `<tr><td colspan="9" class="px-5 py-10 text-center text-gray-400 text-xs">No matching rows</td></tr>`;
-      return;
-    }
+          document.getElementById('tableCount').textContent = `${rows.length} row${rows.length !== 1 ? 's' : ''}`;
 
-    tbody.innerHTML = rows.map(d => {
-      const env       = envLabel(d.deploymentName);
-      const badge     = envBadge(env);
-      const statusCls = d.status === 'ACTIVE' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                      : d.status             ? 'bg-amber-50 text-amber-700 border border-amber-200'
-                      :                        'bg-gray-100 text-gray-500 border border-gray-200';
-      return `
-        <tr class="hover:bg-gray-50 transition-colors">
-          <td class="px-5 py-3 font-medium text-gray-800 whitespace-nowrap">${esc(d.workerName)}</td>
-          <td class="px-5 py-3 whitespace-nowrap">
-            <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${badge}">${esc(env)}</span>
+          const tbody = document.getElementById('tableBody');
+          if (!rows.length) {
+            tbody.innerHTML = `<tr><td colspan="9" class="px-5 py-10 text-center  text-xs">No matching rows</td></tr>`;
+            return;
+          }
+
+          tbody.innerHTML = rows.map(d => {
+            const env = envLabel(d.deploymentName);
+            const badge = envBadge(env);
+            const statusCls = d.status === 'ACTIVE' ? 'bg-cohere-paleGreen text-cohere-green border border-cohere-green/10'
+              : d.status ? 'bg-cohere-stone text-cohere-slate border border-cohere-hairline'
+                : 'bg-cohere-stone/50 text-cohere-slateMuted border border-cohere-hairline';
+            return `
+        <tr class="hover:bg-cohere-stone/50 transition-colors border-b border-cohere-cardBorder last:border-0">
+          <td class="px-8 py-4 font-medium text-cohere-black whitespace-nowrap">${esc(d.workerName)}</td>
+          <td class="px-5 py-4 whitespace-nowrap">
+            <span class="inline-flex px-2 py-0.5 rounded-full text-[12px] font-mono font-medium ${badge}">${esc(env)}</span>
           </td>
-          <td class="px-5 py-3 whitespace-nowrap">
-            <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${statusCls}">${esc(d.status || '—')}</span>
+          <td class="px-5 py-4 whitespace-nowrap">
+            <span class="inline-flex px-2 py-0.5 rounded-full text-[12px] font-mono font-medium ${statusCls}">${titleCase(d.status)}</span>
           </td>
-          <td class="px-5 py-3 text-right font-semibold text-gray-900 tabular">${fmt(d.calls)}</td>
-          <td class="px-5 py-3 text-right text-gray-600 tabular">${fmt(d.minutes, 1)}</td>
-          <td class="px-5 py-3 text-right text-gray-600 tabular">${(d.averageCallDuration ?? 0).toFixed(2)} min</td>
-          <td class="px-5 py-3 text-gray-600 max-w-[160px] truncate" title="${esc(d.topDisposition || '—')}">${esc(d.topDisposition || '—')}</td>
+          <td class="px-5 py-4 text-right font-medium text-cohere-black tabular font-mono">${fmt(d.calls)}</td>
+          <td class="px-5 py-4 text-right text-cohere-slateMuted tabular font-mono">${fmt(d.minutes, 1)}</td>
+          <td class="px-5 py-4 text-right text-cohere-slateMuted tabular font-mono">${(d.averageCallDuration ?? 0).toFixed(2)} min</td>
+          <td class="px-8 py-4 text-cohere-slateMuted max-w-[160px] truncate" title="${esc(d.topDisposition || '—')}">${esc(d.topDisposition || '—')}</td>
         </tr>`;
-    }).join('');
-  }
+          }).join('');
+        }
 
-  // ── Status bar ────────────────────────────────────────────────
-  function setStatus(type, msg) {
-    const dot = document.getElementById('statusDot');
-    const txt = document.getElementById('statusText');
-    dot.className = `w-2 h-2 rounded-full flex-shrink-0 ${
-      type === 'ok'      ? 'bg-emerald-500' :
-      type === 'loading' ? 'bg-amber-400 animate-pulse' :
-                           'bg-rose-500'}`;
-    txt.textContent = msg;
-  }
+        // ── Status bar ────────────────────────────────────────────────
+        function setStatus(type, msg) {
+          const dot = document.getElementById('statusDot');
+          const txt = document.getElementById('statusText');
+          dot.className = `w-2 h-2 rounded-full flex-shrink-0 ${type === 'ok' ? 'bg-emerald-500' :
+            type === 'loading' ? 'bg-amber-400 animate-pulse' :
+              'bg-rose-500'}`;
+          txt.textContent = msg;
+        }
 
-  function setSpin(on) {
-    const icon = document.getElementById('refreshIcon');
-    if (icon) icon.setAttribute('class', `w-3.5 h-3.5 ${on ? 'animate-spin' : ''}`);
-    document.getElementById('refreshBtn').disabled = on;
-  }
+        function setSpin(on) {
+          const icon = document.getElementById('refreshIcon');
+          if (icon) icon.setAttribute('class', `w-3.5 h-3.5 ${on ? 'animate-spin' : ''}`);
+          document.getElementById('refreshBtn').disabled = on;
+        }
 
-  function setLastUpdated(dt) {
-    const el = document.getElementById('lastUpdated');
-    if (el) { el.textContent = `Last updated: ${dt.toLocaleString('en-ZA', { month:'short', day:'numeric', year:'numeric', hour:'2-digit', minute:'2-digit' })}`; el.classList.remove('hidden'); }
-  }
+        function setLastUpdated(dt) {
+          const el = document.getElementById('lastUpdated');
+          if (el) { el.textContent = `Last updated: ${dt.toLocaleString('en-ZA', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}`; el.classList.remove('hidden'); }
+        }
 
-  function setDateRangeLabel(start, end) {
-    const el = document.getElementById('dateRangeLabel');
-    if (el) el.textContent = `${fmtDate(start)} → ${fmtDate(end)}`;
-  }
+        function setDateRangeLabel(start, end) {
+          const el = document.getElementById('dateRangeLabel');
+          if (el) el.textContent = `${fmtDate(start)} → ${fmtDate(end)}`;
+        }
 
-  // ── Debug info ───────────────────────────────────────────────
-  function setDebugInfo(elementId, endpoint, startDate, endDate) {
-    const el = document.getElementById(elementId);
-    if (!el) return;
-    const fmt = d => new Date(d).toLocaleDateString('en-ZA', { day:'2-digit', month:'short', year:'numeric' });
-    el.textContent = `${endpoint}  ·  ${fmt(startDate)} – ${fmt(endDate)}`;
-  }
+        // ── Debug info ───────────────────────────────────────────────
+        function setDebugInfo(elementId, endpoint, startDate, endDate) {
+          const el = document.getElementById(elementId);
+          if (!el) return;
+          const fmt = d => d ? new Date(d).toLocaleDateString('en-ZA', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+          el.textContent = `${endpoint}  ·  ${fmt(startDate)} – ${fmt(endDate)}`;
+        }
 
-  // ── Section error display ─────────────────────────────────────
-  function showSectionError(sectionId, msg) {
-    const el = document.getElementById(sectionId);
-    if (!el) return;
-    el.classList.add('section-error');
-    const existing = el.querySelector('.error-overlay');
-    if (!existing) {
-      const div = document.createElement('div');
-      div.className = 'error-overlay text-xs text-rose-400 bg-rose-500/10 rounded-lg px-3 py-2 mt-2';
-      div.textContent = msg;
-      el.appendChild(div);
-    }
-  }
+        // ── Section error display ─────────────────────────────────────
+        function showSectionError(sectionId, msg) {
+          const el = document.getElementById(sectionId);
+          if (!el) return;
+          el.classList.add('section-error');
+          const existing = el.querySelector('.error-overlay');
+          if (!existing) {
+            const div = document.createElement('div');
+            div.className = 'error-overlay text-xs text-rose-400 bg-rose-500/10 rounded-lg px-3 py-2 mt-2';
+            div.textContent = msg;
+            el.appendChild(div);
+          }
+        }
 
-  return {
-    renderKPIs,
-    renderAuthStatus,
-    renderBotResponseTime,
-    renderTable,
-    filterTable,
-    sortBy: _sortBy,
-    setStatus,
-    setSpin,
-    setLastUpdated,
-    setDateRangeLabel,
-    showSectionError,
-    setDebugInfo,
-  };
-})();
+        return {
+          kpiCard,
+          renderKPIs,
+          renderAuthStatus,
+          renderBotResponseTime,
+          renderTable,
+          filterTable,
+          sortBy: _sortBy,
+          setStatus,
+          setSpin,
+          setLastUpdated,
+          setDateRangeLabel,
+          showSectionError,
+          setDebugInfo,
+        };
+      })();
 
-// ── Quick date range helper ───────────────────────────────────
-function setDateRange(preset) {
-  const today = new Date();
-  const fmt = d => d.toISOString().slice(0, 10);
-  let start = today, end = today;
-  if (preset === 'today') { start = end = today; }
-  else if (preset === '7d')  { start = new Date(today - 6 * 86400000); }
-  else if (preset === '14d') { start = new Date(today - 13 * 86400000); }
-  else if (preset === '30d') { start = new Date(today - 29 * 86400000); }
-  else if (preset === 'mtd') { start = new Date(today.getFullYear(), today.getMonth(), 1); }
-  document.getElementById('startDate').value = fmt(start);
-  document.getElementById('endDate').value   = fmt(end);
-  triggerRefresh();
-}
+      // ── Quick date range helper ───────────────────────────────────
+      function setDateRange(preset) {
+        const today = new Date();
+        const fmt = d => d.toISOString().slice(0, 10);
+        let start = today, end = today;
+        if (preset === 'today') { start = end = today; }
+        else if (preset === '7d') { start = new Date(today - 6 * 86400000); }
+        else if (preset === '14d') { start = new Date(today - 13 * 86400000); }
+        else if (preset === '30d') { start = new Date(today - 29 * 86400000); }
+        else if (preset === 'mtd') { start = new Date(today.getFullYear(), today.getMonth(), 1); }
+        document.getElementById('startDate').value = fmt(start);
+        document.getElementById('endDate').value = fmt(end);
+        triggerRefresh();
+      }
 
-// Wire column sort clicks
-document.querySelectorAll('.th-sort').forEach(th => {
-  th.style.cursor = 'pointer';
-  th.classList.add('text-gray-500', 'font-semibold', 'select-none', 'hover:text-gray-800', 'whitespace-nowrap');
-  th.addEventListener('click', () => UI.sortBy(th.dataset.col));
-  th.innerHTML += ' ↕';
-});
-</script>
-
-<!-- ── Orchestrator ──────────────────────────────────────────── -->
-<script>
-'use strict';
-
-// ── Format helpers ────────────────────────────────────────────
-function fmt(n, dec = 0) {
-  if (n == null || isNaN(n)) return '—';
-  return (+n).toLocaleString('en-US', { minimumFractionDigits: dec, maximumFractionDigits: dec });
-}
-function pct(n) {
-  if (n == null || isNaN(n)) return '—';
-  return (n * 100).toFixed(1) + '%';
-}
-function fmtDate(iso) {
-  if (!iso) return '—';
-  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-}
-function toDateStr(d) { return d.toISOString().split('T')[0]; }
-function esc(s) {
-  return String(s ?? '—')
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-}
-function noDataMsg(msg) {
-  return `<p class="text-slate-500 text-xs text-center py-10">${esc(msg)}</p>`;
-}
-
-// ── Env helpers ───────────────────────────────────────────────
-function envLabel(name) {
-  const n = (name || '').toLowerCase();
-  if (n.includes('prod'))    return 'Production';
-  if (n.includes('dev'))     return 'Development';
-  if (n.includes('test'))    return 'Testing';
-  if (n.includes('sandbox')) return 'Sandbox';
-  if (n.includes('mvp'))     return 'MVP';
-  return name || '—';
-}
-function envBadge(env) {
-  const m = {
-    'Production':  'bg-emerald-500/15 text-emerald-400',
-    'Development': 'bg-blue-500/15 text-blue-400',
-    'Testing':     'bg-amber-500/15 text-amber-400',
-    'Sandbox':     'bg-purple-500/15 text-purple-400',
-    'MVP':         'bg-pink-500/15 text-pink-400',
-  };
-  return m[env] || 'bg-slate-500/15 text-slate-400';
-}
-
-// ── Auto-refresh ──────────────────────────────────────────────
-let _refreshTimer   = null;
-let _countdownTimer = null;
-const REFRESH_SEC   = 15 * 60;
-
-function scheduleRefresh(seconds) {
-  clearTimeout(_refreshTimer);
-  clearInterval(_countdownTimer);
-
-  let remaining = seconds;
-  const pill = document.getElementById('countdownPill');
-  const val  = document.getElementById('countdownVal');
-  if (pill) pill.classList.remove('hidden');
-
-  _countdownTimer = setInterval(() => {
-    remaining -= 1;
-    if (val) val.textContent = `${Math.floor(remaining / 60)}:${String(remaining % 60).padStart(2, '0')}`;
-    if (remaining <= 0) {
-      clearInterval(_countdownTimer);
-      loadDashboard();
-    }
-  }, 1000);
-}
-
-function triggerRefresh() {
-  clearTimeout(_refreshTimer);
-  clearInterval(_countdownTimer);
-  const pill = document.getElementById('countdownPill');
-  if (pill) pill.classList.add('hidden');
-
-  // Reload current active tab
-  const overviewTab = document.getElementById('overviewTab');
-  const cancelTab = document.getElementById('cancellationsTab');
-  if (cancelTab && !cancelTab.classList.contains('hidden')) {
-    loadCancellationsData();
-  } else {
-    loadDashboard();
-  }
-}
-
-// ── Main load function ────────────────────────────────────────
-async function loadDashboard() {
-  UI.setStatus('loading', 'Fetching data…');
-  UI.setSpin(true);
-
-  const startDate   = document.getElementById('startDate').value;
-  const endDate     = document.getElementById('endDate').value;
-  const granularity = 'daily';
-
-  UI.setDateRangeLabel(startDate, endDate);
-
-  try {
-    // 1. Fetch voice analysis
-    const analysis = await APIClient.fetchVoiceAnalysis(
-      new Date(startDate).toISOString(),
-      new Date(endDate + 'T23:59:59').toISOString(),
-      granularity,
-    );
-
-    // 2. Discover deployment IDs from response
-    const depIds = DataProcessor.extractDeploymentIds(analysis);
-    if (CONFIG.DEBUG) console.log('[Dashboard] Discovered deployments:', depIds);
-
-    // 3. Fetch all deployment details in parallel
-    const depDetailsMap = await APIClient.fetchAllDeployments(depIds);
-
-    // 4. Process & derive all metrics
-    const data = DataProcessor.process(analysis, depDetailsMap);
-    if (CONFIG.DEBUG) console.log('[Dashboard] Processed data:', data);
-
-    // 5. Rebuild charts (destroy first to prevent memory leaks)
-    Charts.destroyAll();
-
-    try { Charts.buildWorkerBar(data.aggregated); }
-    catch (e) { UI.showSectionError('workerSection', e.message); }
-
-    // 6. Render KPIs & table
-    UI.renderKPIs(data);
-    UI.setDebugInfo('workerDebug', 'POST /api/voice-analysis', startDate, endDate + 'T23:59:59');
-    UI.setDebugInfo('tableDebug',  'POST /api/voice-analysis + GET /api/deployments/{id}', startDate, endDate + 'T23:59:59');
-    UI.renderAuthStatus(data.authStatus);
-    UI.renderBotResponseTime(data.botResponseTime);
-    UI.renderTable(data.aggregated);
-    UI.setLastUpdated(new Date());
-    UI.setStatus('ok', `${Object.keys(data.aggregated).length} deployments · ${data.breakdown.length} period(s)`);
-
-    // 7. Schedule next refresh
-    scheduleRefresh(REFRESH_SEC);
-
-  } catch (err) {
-    UI.setStatus('error', `Error — ${err.message}`);
-    console.error('[Dashboard] Load failed:', err);
-  } finally {
-    UI.setSpin(false);
-  }
-}
-
-// ── Tab Management ────────────────────────────────────────────
-const CANCELLATION_WORKER_ID = 'worker_b6395fb0-24ee-48db-84c9-c340415e72cd';
-const CANCELLATION_DEPLOYMENT_ID = 'deploy_a8bc8d4f-67e0-42b5-8c98-cc33f693224e';
-const CANCELLATION_DEPLOYMENT_NAME = 'GolfNow - Cancellations';
-
-function switchTab(tabName) {
-  const tabs = document.querySelectorAll('.tab-content');
-  const btns = document.querySelectorAll('.tab-btn');
-
-  tabs.forEach(tab => tab.classList.add('hidden'));
-  btns.forEach(btn => {
-    btn.classList.remove('active', 'text-indigo-600', 'border-indigo-500');
-    btn.classList.add('text-gray-500', 'border-transparent');
-  });
-
-  if (tabName === 'overview') {
-    document.getElementById('overviewTab').classList.remove('hidden');
-    document.getElementById('tabOverview').classList.add('active', 'text-indigo-600', 'border-indigo-500');
-    document.getElementById('tabOverview').classList.remove('text-gray-500', 'border-transparent');
-  } else if (tabName === 'cancellations') {
-    document.getElementById('cancellationsTab').classList.remove('hidden');
-    document.getElementById('tabCancellations').classList.add('active', 'text-indigo-600', 'border-indigo-500');
-    document.getElementById('tabCancellations').classList.remove('text-gray-500', 'border-transparent');
-    loadCancellationsData();
-  }
-}
-
-async function loadCancellationsData() {
-  UI.setStatus('loading', 'Loading cancellation details…');
-
-  const startDate   = document.getElementById('startDate').value;
-  const endDate     = document.getElementById('endDate').value;
-  const isoStart    = new Date(startDate + 'T00:00:00').toISOString();
-  const isoEnd      = new Date(endDate   + 'T23:59:59').toISOString();
-
-  try {
-    console.log('[Debug] Date range sent to both APIs:', { isoStart, isoEnd });
-
-    // Fetch both endpoints in parallel — logs use windowed fetch to avoid timeouts
-    const days = Math.ceil((new Date(isoEnd) - new Date(isoStart)) / 86400000);
-    UI.setStatus('loading', `Fetching ${days}-day range (2-hour windows, up to 15 parallel)…`);
-    const [analysis, logs] = await Promise.all([
-      APIClient.fetchVoiceAnalysis(isoStart, isoEnd, 'daily'),
-      APIClient.fetchWorkerDeploymentLogsSliced(CANCELLATION_WORKER_ID, CANCELLATION_DEPLOYMENT_ID, isoStart, isoEnd),
-    ]);
-    console.log('[Debug] voice-analysis dateRange in response:', analysis?.dateRange ?? analysis?.summary?.dateRange ?? 'not in response');
-    console.log('[Debug] voice-analysis summary for this deployment:', (() => {
-      let calls = 0, mins = 0;
-      (analysis?.breakdown || []).forEach(p => (p.deployments || []).forEach(d => {
-        if (d.deploymentId === CANCELLATION_DEPLOYMENT_ID) { calls += d.calls||0; mins += d.minutes||0; }
-      }));
-      return { calls, minutes: mins.toFixed(1) };
-    })());
-    console.log('[Debug] deploymentLogs records returned:', logs.length);
-
-    // Get deployment details
-    const depDetailsMap = await APIClient.fetchAllDeployments([CANCELLATION_DEPLOYMENT_ID]);
-    const depDetail = depDetailsMap[CANCELLATION_DEPLOYMENT_ID];
-    if (depDetail) {
-      document.getElementById('cancelDeploymentName').textContent = depDetail.name || CANCELLATION_DEPLOYMENT_ID;
-      document.getElementById('cancelWorkerName').textContent = depDetail.workerName || CANCELLATION_WORKER_ID;
-    }
-
-    // Extract voice-analysis totals filtered to this deployment
-    let vaTotalCalls = 0, vaTotalMinutes = 0;
-    if (analysis?.breakdown) {
-      analysis.breakdown.forEach(period => {
-        (period.deployments || []).forEach(dep => {
-          if (dep.deploymentId !== CANCELLATION_DEPLOYMENT_ID) return;
-          vaTotalCalls   += dep.calls   || 0;
-          vaTotalMinutes += dep.minutes || 0;
-        });
+      // Wire column sort clicks
+      document.querySelectorAll('.th-sort').forEach(th => {
+        th.style.cursor = 'pointer';
+        th.classList.add('text-cohere-slateMuted', 'font-semibold', 'select-none', 'hover:text-cohere-black', 'whitespace-nowrap');
+        th.addEventListener('click', () => UI.sortBy(th.dataset.col));
+        th.innerHTML += ' ↕';
       });
-    }
-    const vaAvgDuration = vaTotalCalls > 0 ? (vaTotalMinutes / vaTotalCalls).toFixed(2) : '—';
+    </script>
 
-    // Process all detail metrics from deploymentLogs
-    const startDateObj = new Date(startDate);
-    const endDateObj   = new Date(endDate + 'T23:59:59');
-    const cancelData   = filterCancellationData(logs, startDateObj, endDateObj);
-    cancelData.vaTotalCalls    = vaTotalCalls;
-    cancelData.vaTotalMinutes  = vaTotalMinutes.toFixed(1);
-    cancelData.vaAvgDuration   = vaAvgDuration;
-    if (CONFIG.DEBUG) console.log('[Cancellations] Filtered data:', cancelData);
+    <!-- ── Orchestrator ──────────────────────────────────────────── -->
+    <script>
+      'use strict';
 
-    renderCancellationMetrics(cancelData);
-
-    const failedSlices = logs._failedSlices || 0;
-    const totalSlices  = logs._totalSlices  || 12;
-    const sliceNote    = failedSlices > 0
-      ? ` ⚠ ${failedSlices}/${totalSlices} slices failed — ${logs.length} records (INCOMPLETE)`
-      : ` ✓ all ${totalSlices} slices OK — ${logs.length} records`;
-    const logsEndpoint = `GET /api/workers/${CANCELLATION_WORKER_ID}/deploymentLogs/voice${sliceNote}`;
-    const vaEndpoint   = `POST /api/voice-analysis (filtered to ${CANCELLATION_DEPLOYMENT_ID})`;
-    UI.setDebugInfo('cancelBillingDebug',     vaEndpoint, startDate, isoEnd);
-    UI.setDebugInfo('cancelKpiDebug',         `${vaEndpoint}  |  ${logsEndpoint}`, startDate, isoEnd);
-    UI.setDebugInfo('cancelCompletionDebug',  logsEndpoint, startDate, isoEnd);
-    UI.setDebugInfo('cancelDispositionDebug', logsEndpoint, startDate, isoEnd);
-    UI.setDebugInfo('cancelBotRtDebug',       logsEndpoint, startDate, isoEnd);
-    UI.setDebugInfo('cancelStatusDebug',      logsEndpoint, startDate, isoEnd);
-    UI.setDebugInfo('cancelAuthDebug',        logsEndpoint, startDate, isoEnd);
-
-    UI.setStatus('ok', 'Cancellation details loaded');
-  } catch (err) {
-    UI.setStatus('error', `Error loading cancellations — ${err.message}`);
-    console.error('[Cancellations] Load failed:', err);
-    document.getElementById('cancelKpiSection').innerHTML = `<div class="col-span-full text-center py-8 text-slate-400">Failed to load data</div>`;
-  }
-}
-
-function filterCancellationData(logs, startDateObj, endDateObj) {
-  const dispositionFreq = {};
-  const botResponseTimes = [];
-  const cancellationStatuses = {};
-  const authStatuses = {};
-  const completedStatuses = {};
-  let transferToHumanCount = 0;
-  let totalDurationMs = 0;
-  let durationCount = 0;
-
-  // All metrics derived from deploymentLogs only (single source of truth)
-  let filtered = Array.isArray(logs) ? logs : [];
-  if (startDateObj && endDateObj) {
-    filtered = filtered.filter(log => {
-      const logTime = log.createdAt ? new Date(log.createdAt) : (log.startTime ? new Date(log.startTime) : null);
-      if (!logTime) return true;
-      return logTime >= startDateObj && logTime <= endDateObj;
-    });
-  }
-
-  const totalCalls = filtered.length;
-
-  filtered.forEach(log => {
-      // Try all known extraction field names
-      const ext = log.extractionsData || log.extractions || log.extraction || {};
-
-      // Duration: prefer endTime-startTime, fallback to duration field
-      if (log.endTime && log.startTime) {
-        const ms = new Date(log.endTime) - new Date(log.startTime);
-        if (ms > 0) { totalDurationMs += ms; durationCount++; }
-      } else if (log.duration && !isNaN(log.duration)) {
-        totalDurationMs += Number(log.duration) * 1000;
-        durationCount++;
+      // ── Format helpers ────────────────────────────────────────────
+      function fmt(n, dec = 0) {
+        if (n == null || isNaN(n)) return '—';
+        return (+n).toLocaleString('en-US', { minimumFractionDigits: dec, maximumFractionDigits: dec });
+      }
+      function pct(n) {
+        if (n == null || isNaN(n)) return '—';
+        return (n * 100).toFixed(1) + '%';
+      }
+      function fmtDate(iso) {
+        if (!iso) return '—';
+        return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      }
+      function toDateStr(d) { return d.toISOString().split('T')[0]; }
+      function titleCase(s) {
+        if (!s) return '—';
+        return s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
+      }
+      function esc(s) {
+        return String(s ?? '—')
+          .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+      }
+      function noDataMsg(msg) {
+        return `<p class="text-slate-500 text-xs text-center py-10">${esc(msg)}</p>`;
       }
 
-      // Disposition breakdown
-      if (ext.disposition) {
-        dispositionFreq[ext.disposition] = (dispositionFreq[ext.disposition] || 0) + 1;
+      // ── Env helpers ───────────────────────────────────────────────
+      function envLabel(name) {
+        const n = (name || '').toLowerCase();
+        if (n.includes('prod')) return 'Production';
+        if (n.includes('dev')) return 'Development';
+        if (n.includes('test')) return 'Testing';
+        if (n.includes('sandbox')) return 'Sandbox';
+        if (n.includes('mvp')) return 'Mvp';
+        return name || '—';
+      }
+      function envBadge(env) {
+        const m = {
+          'Production': 'bg-cohere-paleGreen text-cohere-green border border-cohere-green/10',
+          'Development': 'bg-cohere-paleBlue text-cohere-blue border border-cohere-blue/10',
+          'Testing': 'bg-cohere-stone text-cohere-slate border border-cohere-hairline',
+          'Sandbox': 'bg-cohere-stone text-cohere-slateMuted border border-cohere-hairline',
+          'MVP': 'bg-cohere-coral/10 text-cohere-coral border border-cohere-coral/10',
+        };
+        return m[env] || 'bg-cohere-stone text-cohere-slateMuted border border-cohere-hairline';
       }
 
-      // Bot response time — try all known field names
-      const rt = ext.bot_response_time ?? ext.botResponseTime ?? ext.response_time
-               ?? log.botResponseTime ?? log.bot_response_time ?? log.responseTime ?? null;
-      if (rt !== null && !isNaN(rt)) {
-        botResponseTimes.push(Number(rt));
+      // ── Auto-refresh ──────────────────────────────────────────────
+      let _refreshTimer = null;
+      let _countdownTimer = null;
+      const REFRESH_SEC = 15 * 60;
+
+      function scheduleRefresh(seconds) {
+        clearTimeout(_refreshTimer);
+        clearInterval(_countdownTimer);
+
+        let remaining = seconds;
+        const pill = document.getElementById('countdownPill');
+        const val = document.getElementById('countdownVal');
+        if (pill) pill.classList.remove('hidden');
+
+        _countdownTimer = setInterval(() => {
+          remaining -= 1;
+          if (val) val.textContent = `${Math.floor(remaining / 60)}:${String(remaining % 60).padStart(2, '0')}`;
+          if (remaining <= 0) {
+            clearInterval(_countdownTimer);
+            loadDashboard();
+          }
+        }, 1000);
       }
 
-      // Cancellation status — strip reason after any dash variant; bucket missing as "Not Recorded"
-      if (ext.cancellation_status) {
-        const cancelKey = ext.cancellation_status.split(/[-–—]/)[0].trim();
-        cancellationStatuses[cancelKey] = (cancellationStatuses[cancelKey] || 0) + 1;
-      } else {
-        cancellationStatuses['Not Recorded'] = (cancellationStatuses['Not Recorded'] || 0) + 1;
+      function triggerRefresh() {
+        clearTimeout(_refreshTimer);
+        clearInterval(_countdownTimer);
+        const pill = document.getElementById('countdownPill');
+        if (pill) pill.classList.add('hidden');
+
+        // Reload current active tab
+        const overviewTab = document.getElementById('overviewTab');
+        const cancelTab = document.getElementById('cancellationsTab');
+        if (cancelTab && !cancelTab.classList.contains('hidden')) {
+          loadCancellationsData();
+        } else {
+          loadDashboard();
+        }
       }
 
-      // Authentication status — strip reason after any dash variant; bucket missing as "Not Recorded"
-      if (ext.authentication_status) {
-        const authKey = ext.authentication_status.split(/[-–—]/)[0].trim();
-        authStatuses[authKey] = (authStatuses[authKey] || 0) + 1;
-      } else {
-        authStatuses['Not Recorded'] = (authStatuses['Not Recorded'] || 0) + 1;
+      // ── Main load function ────────────────────────────────────────
+      async function loadDashboard() {
+        UI.setStatus('loading', 'Fetching data…');
+        UI.setSpin(true);
+
+        const startDate = document.getElementById('startDate').value;
+        const endDate = document.getElementById('endDate').value;
+        const granularity = 'daily';
+
+        UI.setDateRangeLabel(startDate, endDate);
+
+        // Show skeletons
+        const skels = ['tableSkel'];
+        const wraps = ['tableWrap'];
+        skels.forEach(id => { const el = document.getElementById(id); if (el) el.style.display = 'block'; });
+        wraps.forEach(id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; });
+
+        try {
+          // 1. Fetch voice analysis
+          const analysis = await APIClient.fetchVoiceAnalysis(
+            new Date(startDate).toISOString(),
+            new Date(endDate + 'T23:59:59').toISOString(),
+            granularity,
+          );
+
+          // 2. Discover deployment IDs from response
+          const depIds = DataProcessor.extractDeploymentIds(analysis);
+          if (CONFIG.DEBUG) console.log('[Dashboard] Discovered deployments:', depIds);
+
+          // 3. Fetch all deployment details in parallel
+          const depDetailsMap = await APIClient.fetchAllDeployments(depIds);
+
+          // 4. Process & derive all metrics
+          const data = DataProcessor.process(analysis, depDetailsMap);
+          if (CONFIG.DEBUG) console.log('[Dashboard] Processed data:', data);
+
+          // 5. Rebuild charts (destroy first to prevent memory leaks)
+          Charts.destroyAll();
+
+          try { Charts.buildWorkerBar(data.aggregated); }
+          catch (e) { UI.showSectionError('workerSection', e.message); }
+
+          // 6. Render KPIs & table
+          UI.renderKPIs(data);
+          UI.setDebugInfo('workerDebug', 'POST /api/voice-analysis', startDate, endDate + 'T23:59:59');
+          UI.setDebugInfo('tableDebug', 'POST /api/voice-analysis + GET /api/deployments/{id}', startDate, endDate + 'T23:59:59');
+          UI.renderAuthStatus(data.authStatus);
+          UI.renderBotResponseTime(data.botResponseTime);
+          UI.renderTable(data.aggregated);
+          UI.setLastUpdated(new Date());
+          UI.setStatus('ok', `${Object.keys(data.aggregated).length} deployments · ${data.breakdown.length} period(s)`);
+
+          // 7. Schedule next refresh
+          scheduleRefresh(REFRESH_SEC);
+
+        } catch (err) {
+          UI.setStatus('error', `Error — ${err.message}`);
+          console.error('[Dashboard] Load failed:', err);
+        } finally {
+          UI.setSpin(false);
+        }
       }
 
-      // Completed call status — bucket missing as "Not Recorded"
-      if (ext.completed_call_status !== undefined && ext.completed_call_status !== null) {
-        const status = ext.completed_call_status ? 'Completed' : 'Not Completed';
-        completedStatuses[status] = (completedStatuses[status] || 0) + 1;
-      } else {
-        completedStatuses['Not Recorded'] = (completedStatuses['Not Recorded'] || 0) + 1;
+      // ── Tab Management ────────────────────────────────────────────
+      const CANCELLATION_WORKER_ID = 'worker_b6395fb0-24ee-48db-84c9-c340415e72cd';
+      const CANCELLATION_DEPLOYMENT_ID = 'deploy_a8bc8d4f-67e0-42b5-8c98-cc33f693224e';
+      const CANCELLATION_DEPLOYMENT_NAME = 'GolfNow - Cancellations';
+
+      function switchTab(tabName) {
+        const tabs = document.querySelectorAll('.tab-content');
+        const btns = document.querySelectorAll('.tab-btn');
+
+        tabs.forEach(tab => tab.classList.add('hidden'));
+        btns.forEach(btn => {
+          btn.classList.remove('active', 'text-cohere-black', 'border-cohere-black');
+          btn.classList.add('text-cohere-slateMuted', 'border-transparent');
+        });
+
+        if (tabName === 'overview') {
+          document.getElementById('overviewTab').classList.remove('hidden');
+          const overviewBtn = document.getElementById('tabOverview');
+          overviewBtn.classList.add('active', 'active-tab');
+          overviewBtn.classList.remove('text-cohere-slateMuted', 'hover:bg-cohere-stone');
+        } else if (tabName === 'cancellations') {
+          document.getElementById('cancellationsTab').classList.remove('hidden');
+          const cancelBtn = document.getElementById('tabCancellations');
+          cancelBtn.classList.add('active', 'active-tab');
+          cancelBtn.classList.remove('text-cohere-slateMuted', 'hover:bg-cohere-stone');
+          loadCancellationsData();
+        }
       }
 
-      // Transfer to human
-      if (ext.transfer_to_human === true) {
-        transferToHumanCount++;
+      async function loadCancellationsData() {
+        UI.setStatus('loading', 'Loading cancellation details…');
+
+        const startDate = document.getElementById('startDate').value;
+        const endDate = document.getElementById('endDate').value;
+        const isoStart = new Date(startDate + 'T00:00:00').toISOString();
+        const isoEnd = new Date(endDate + 'T23:59:59').toISOString();
+
+        try {
+          console.log('[Debug] Date range sent to both APIs:', { isoStart, isoEnd });
+
+          // Fetch both endpoints in parallel — logs use windowed fetch to avoid timeouts
+          const days = Math.ceil((new Date(isoEnd) - new Date(isoStart)) / 86400000);
+          UI.setStatus('loading', `Fetching ${days}-day range (2-hour windows, up to 15 parallel)…`);
+          const [analysis, logs] = await Promise.all([
+            APIClient.fetchVoiceAnalysis(isoStart, isoEnd, 'daily'),
+            APIClient.fetchWorkerDeploymentLogsSliced(CANCELLATION_WORKER_ID, CANCELLATION_DEPLOYMENT_ID, isoStart, isoEnd),
+          ]);
+          console.log('[Debug] voice-analysis dateRange in response:', analysis?.dateRange ?? analysis?.summary?.dateRange ?? 'not in response');
+          console.log('[Debug] voice-analysis summary for this deployment:', (() => {
+            let calls = 0, mins = 0;
+            (analysis?.breakdown || []).forEach(p => (p.deployments || []).forEach(d => {
+              if (d.deploymentId === CANCELLATION_DEPLOYMENT_ID) { calls += d.calls || 0; mins += d.minutes || 0; }
+            }));
+            return { calls, minutes: mins.toFixed(1) };
+          })());
+          console.log('[Debug] deploymentLogs records returned:', logs.length);
+
+          // Get deployment details
+          const depDetailsMap = await APIClient.fetchAllDeployments([CANCELLATION_DEPLOYMENT_ID]);
+          const depDetail = depDetailsMap[CANCELLATION_DEPLOYMENT_ID];
+          if (depDetail) {
+            document.getElementById('cancelDeploymentName').textContent = depDetail.name || CANCELLATION_DEPLOYMENT_ID;
+            document.getElementById('cancelWorkerName').textContent = depDetail.workerName || CANCELLATION_WORKER_ID;
+          }
+
+          // Extract voice-analysis totals filtered to this deployment
+          let vaTotalCalls = 0, vaTotalMinutes = 0;
+          if (analysis?.breakdown) {
+            analysis.breakdown.forEach(period => {
+              (period.deployments || []).forEach(dep => {
+                if (dep.deploymentId !== CANCELLATION_DEPLOYMENT_ID) return;
+                vaTotalCalls += dep.calls || 0;
+                vaTotalMinutes += dep.minutes || 0;
+              });
+            });
+          }
+          const vaAvgDuration = vaTotalCalls > 0 ? (vaTotalMinutes / vaTotalCalls).toFixed(2) : '—';
+
+          // Process all detail metrics from deploymentLogs
+          const startDateObj = new Date(startDate);
+          const endDateObj = new Date(endDate + 'T23:59:59');
+          const cancelData = filterCancellationData(logs, startDateObj, endDateObj);
+          cancelData.vaTotalCalls = vaTotalCalls;
+          cancelData.vaTotalMinutes = vaTotalMinutes.toFixed(1);
+          cancelData.vaAvgDuration = vaAvgDuration;
+          if (CONFIG.DEBUG) console.log('[Cancellations] Filtered data:', cancelData);
+
+          renderCancellationMetrics(cancelData);
+
+          const failedSlices = logs._failedSlices || 0;
+          const totalSlices = logs._totalSlices || 12;
+          const sliceNote = failedSlices > 0
+            ? ` ⚠ ${failedSlices}/${totalSlices} slices failed — ${logs.length} records (INCOMPLETE)`
+            : ` ✓ all ${totalSlices} slices OK — ${logs.length} records`;
+          const logsEndpoint = `GET /api/workers/${CANCELLATION_WORKER_ID}/deploymentLogs/voice${sliceNote}`;
+          const vaEndpoint = `POST /api/voice-analysis (filtered to ${CANCELLATION_DEPLOYMENT_ID})`;
+          UI.setDebugInfo('cancelBillingDebug', vaEndpoint, startDate, isoEnd);
+          UI.setDebugInfo('cancelKpiDebug', `${vaEndpoint}  |  ${logsEndpoint}`, startDate, isoEnd);
+          UI.setDebugInfo('cancelCompletionDebug', logsEndpoint, startDate, isoEnd);
+          UI.setDebugInfo('cancelDispositionDebug', logsEndpoint, startDate, isoEnd);
+          UI.setDebugInfo('cancelBotRtDebug', logsEndpoint, startDate, isoEnd);
+          UI.setDebugInfo('cancelStatusDebug', logsEndpoint, startDate, isoEnd);
+          UI.setDebugInfo('cancelAuthDebug', logsEndpoint, startDate, isoEnd);
+
+          UI.setStatus('ok', 'Cancellation details loaded');
+        } catch (err) {
+          UI.setStatus('error', `Error loading cancellations — ${err.message}`);
+          console.error('[Cancellations] Load failed:', err);
+          document.getElementById('cancelKpiSection').innerHTML = `<div class="col-span-full text-center py-8 text-slate-400">Failed to load data</div>`;
+        }
       }
-    });
 
-  const totalMinutesVal = durationCount > 0 ? totalDurationMs / 60000 : null;
-  const averageDuration = (totalMinutesVal !== null && totalCalls > 0)
-    ? (totalMinutesVal / totalCalls).toFixed(2)
-    : null;
-  const avgBotResponseTime = botResponseTimes.length > 0
-    ? (botResponseTimes.reduce((a, b) => a + b, 0) / botResponseTimes.length).toFixed(2)
-    : null;
-  const transferRate = totalCalls > 0 ? ((transferToHumanCount / totalCalls) * 100).toFixed(1) : 0;
-  const completedStatCount = completedStatuses['Completed'] || 0;
-  const completionRate = totalCalls > 0 ? ((completedStatCount / totalCalls) * 100).toFixed(1) : 0;
+      function filterCancellationData(logs, startDateObj, endDateObj) {
+        const dispositionFreq = {};
+        const botResponseTimes = [];
+        const cancellationStatuses = {};
+        const authStatuses = {};
+        const completedStatuses = {};
+        let transferToHumanCount = 0;
+        let totalDurationMs = 0;
+        let durationCount = 0;
 
-  return {
-    totalCalls,
-    totalMinutes: totalMinutesVal !== null ? totalMinutesVal.toFixed(1) : null,
-    averageDuration,
-    transferToHumanCount,
-    transferRate,
-    completedStatCount,
-    completionRate,
-    dispositionFreq,
-    botResponseTime: avgBotResponseTime,
-    cancellationStatuses,
-    authStatuses,
-    completedStatuses,
-  };
-}
+        // All metrics derived from deploymentLogs only (single source of truth)
+        let filtered = Array.isArray(logs) ? logs : [];
+        if (startDateObj && endDateObj) {
+          filtered = filtered.filter(log => {
+            const logTime = log.createdAt ? new Date(log.createdAt) : (log.startTime ? new Date(log.startTime) : null);
+            if (!logTime) return true;
+            return logTime >= startDateObj && logTime <= endDateObj;
+          });
+        }
 
-const BILLING_TIERS = [
-  { label: 'Standard',    min: 0,      max: 79999,  rate: 0.42 },
-  { label: 'Growth',      min: 80000,  max: 299999, rate: 0.29 },
-  { label: 'Enterprise',  min: 300000, max: Infinity, rate: 0.25 },
-];
+        const totalCalls = filtered.length;
 
-function calcBilling(minutes) {
-  const mins = parseFloat(minutes) || 0;
-  const tier = BILLING_TIERS.find(t => mins <= t.max) || BILLING_TIERS[BILLING_TIERS.length - 1];
-  return { mins, tier, amount: mins * tier.rate };
-}
+        filtered.forEach(log => {
+          // Try all known extraction field names
+          const ext = log.extractionsData || log.extractions || log.extraction || {};
 
-function renderCancellationMetrics(data) {
-  if (!data) return;
+          // Duration: prefer endTime-startTime, fallback to duration field
+          if (log.endTime && log.startTime) {
+            const ms = new Date(log.endTime) - new Date(log.startTime);
+            if (ms > 0) { totalDurationMs += ms; durationCount++; }
+          } else if (log.duration && !isNaN(log.duration)) {
+            totalDurationMs += Number(log.duration) * 1000;
+            durationCount++;
+          }
 
-  // ── Billing ──────────────────────────────────────────────────
-  const billing = calcBilling(data.vaTotalMinutes);
-  const fmtUSD  = n => '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  const fmtMins = n => n.toLocaleString('en-US', { maximumFractionDigits: 1 });
-  document.getElementById('cancelBillingContent').innerHTML = `
+          // Disposition breakdown
+          if (ext.disposition) {
+            dispositionFreq[ext.disposition] = (dispositionFreq[ext.disposition] || 0) + 1;
+          }
+
+          // Bot response time — try all known field names
+          const rt = ext.bot_response_time ?? ext.botResponseTime ?? ext.response_time
+            ?? log.botResponseTime ?? log.bot_response_time ?? log.responseTime ?? null;
+          if (rt !== null && !isNaN(rt)) {
+            botResponseTimes.push(Number(rt));
+          }
+
+          // Cancellation status — strip reason after any dash variant; bucket missing as "Not Recorded"
+          if (ext.cancellation_status) {
+            const cancelKey = ext.cancellation_status.split(/[-–—]/)[0].trim();
+            cancellationStatuses[cancelKey] = (cancellationStatuses[cancelKey] || 0) + 1;
+          } else {
+            cancellationStatuses['Not Recorded'] = (cancellationStatuses['Not Recorded'] || 0) + 1;
+          }
+
+          // Authentication status — strip reason after any dash variant; bucket missing as "Not Recorded"
+          if (ext.authentication_status) {
+            const authKey = ext.authentication_status.split(/[-–—]/)[0].trim();
+            authStatuses[authKey] = (authStatuses[authKey] || 0) + 1;
+          } else {
+            authStatuses['Not Recorded'] = (authStatuses['Not Recorded'] || 0) + 1;
+          }
+
+          // Completed call status — bucket missing as "Not Recorded"
+          if (ext.completed_call_status !== undefined && ext.completed_call_status !== null) {
+            const status = ext.completed_call_status ? 'Completed' : 'Not Completed';
+            completedStatuses[status] = (completedStatuses[status] || 0) + 1;
+          } else {
+            completedStatuses['Not Recorded'] = (completedStatuses['Not Recorded'] || 0) + 1;
+          }
+
+          // Transfer to human
+          if (ext.transfer_to_human === true) {
+            transferToHumanCount++;
+          }
+        });
+
+        const totalMinutesVal = durationCount > 0 ? totalDurationMs / 60000 : null;
+        const averageDuration = (totalMinutesVal !== null && totalCalls > 0)
+          ? (totalMinutesVal / totalCalls).toFixed(2)
+          : null;
+        const avgBotResponseTime = botResponseTimes.length > 0
+          ? (botResponseTimes.reduce((a, b) => a + b, 0) / botResponseTimes.length).toFixed(2)
+          : null;
+        const transferRate = totalCalls > 0 ? ((transferToHumanCount / totalCalls) * 100).toFixed(1) : 0;
+        const completedStatCount = completedStatuses['Completed'] || 0;
+        const completionRate = totalCalls > 0 ? ((completedStatCount / totalCalls) * 100).toFixed(1) : 0;
+
+        return {
+          totalCalls,
+          totalMinutes: totalMinutesVal !== null ? totalMinutesVal.toFixed(1) : null,
+          averageDuration,
+          transferToHumanCount,
+          transferRate,
+          completedStatCount,
+          completionRate,
+          dispositionFreq,
+          botResponseTime: avgBotResponseTime,
+          cancellationStatuses,
+          authStatuses,
+          completedStatuses,
+        };
+      }
+
+      const BILLING_TIERS = [
+        { label: 'Standard', min: 0, max: 79999, rate: 0.42 },
+        { label: 'Growth', min: 80000, max: 299999, rate: 0.29 },
+        { label: 'Enterprise', min: 300000, max: Infinity, rate: 0.25 },
+      ];
+
+      function calcBilling(minutes) {
+        const mins = parseFloat(minutes) || 0;
+        const tier = BILLING_TIERS.find(t => mins <= t.max) || BILLING_TIERS[BILLING_TIERS.length - 1];
+        return { mins, tier, amount: mins * tier.rate };
+      }
+
+      function renderCancellationMetrics(data) {
+        if (!data) return;
+
+        // ── Billing ──────────────────────────────────────────────────
+        const billing = calcBilling(data.vaTotalMinutes);
+        const fmtUSD = n => '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        const fmtMins = n => n.toLocaleString('en-US', { maximumFractionDigits: 1 });
+        document.getElementById('cancelBillingContent').innerHTML = `
     <div class="flex flex-col sm:flex-row gap-6 items-start">
       <div class="flex-shrink-0">
-        <p class="text-4xl font-bold text-gray-900 tabular">${fmtUSD(billing.amount)}</p>
-        <p class="text-xs text-gray-400 mt-1">${fmtMins(billing.mins)} mins × $${billing.tier.rate.toFixed(2)}/min</p>
+        <p class="text-4xl font-bold text-cohere-black tabular">${fmtUSD(billing.amount)}</p>
+        <p class="text-xs  mt-1">${fmtMins(billing.mins)} mins × $${billing.tier.rate.toFixed(2)}/min</p>
       </div>
       <div class="flex-1 w-full">
         <div class="grid grid-cols-3 gap-2">
           ${BILLING_TIERS.map(t => {
-            const active = t === billing.tier;
-            return `
+          const active = t === billing.tier;
+          return `
               <div class="rounded-lg px-3 py-2.5 border ${active
-                ? 'bg-indigo-50 border-indigo-200'
-                : 'bg-gray-50 border-gray-100'}">
-                <p class="text-[10px] font-semibold uppercase tracking-wider ${active ? 'text-indigo-500' : 'text-gray-400'} mb-1">${t.label}${active ? ' ✓' : ''}</p>
-                <p class="text-sm font-bold ${active ? 'text-indigo-700' : 'text-gray-500'}">$${t.rate.toFixed(2)}<span class="text-xs font-normal">/min</span></p>
-                <p class="text-[10px] text-gray-400 mt-0.5">${t.max === Infinity ? `≥ ${(t.min/1000).toFixed(0)}k mins` : `0–${(t.max/1000).toFixed(0)}k mins`}</p>
+              ? 'bg-cohere-paleBlue border-cohere-blue/30'
+              : 'bg-cohere-stone border-cohere-hairline'}">
+                <p class="text-[10px] font-semibold ${active ? 'text-cohere-blue' : 'text-cohere-slateMuted'} mb-1">${t.label}${active ? ' ✓' : ''}</p>
+                <p class="text-sm font-bold ${active ? 'text-cohere-navy' : 'text-cohere-slate'}">$${t.rate.toFixed(2)}<span class="text-xs font-normal">/min</span></p>
+                <p class="text-[10px] text-cohere-slateMuted mt-0.5">${t.max === Infinity ? `≥ ${(t.min / 1000).toFixed(0)}k mins` : `0–${(t.max / 1000).toFixed(0)}k mins`}</p>
               </div>`;
-          }).join('')}
+        }).join('')}
         </div>
       </div>
     </div>`;
-  document.getElementById('cancelBillingContent').className = 'fade-in';
+        document.getElementById('cancelBillingContent').className = 'fade-in';
 
-  // ── KPI Cards ────────────────────────────────────────────────
-  const kpiCards = [
-    { label: 'Total Calls',   border: 'border-l-indigo-500', vaVal: data.vaTotalCalls ?? '—',    logsVal: data.totalCalls },
-    { label: 'Total Minutes', border: 'border-l-cyan-500',   vaVal: data.vaTotalMinutes ?? '—',  logsVal: data.totalMinutes ?? '—' },
-    { label: 'Avg Duration',  border: 'border-l-purple-500', vaVal: data.vaAvgDuration ?? '—',   logsVal: data.averageDuration ?? '—' },
-  ];
-  document.getElementById('cancelKpiSection').innerHTML = kpiCards.map(c => `
-    <div class="kpi-card bg-white rounded-xl p-5 shadow-sm border border-gray-200 ${c.border}">
-      <p class="text-xs text-gray-500 uppercase tracking-wider font-semibold mb-3">${c.label}</p>
-      <div class="grid grid-cols-2 gap-2">
-        <div class="bg-gray-50 border border-gray-100 rounded-lg p-2.5">
-          <p class="text-[10px] text-gray-400 font-medium mb-1 uppercase tracking-wider">voice-analysis</p>
-          <p class="text-xl font-bold text-gray-900">${c.vaVal}</p>
-        </div>
-        <div class="bg-gray-50 border border-gray-100 rounded-lg p-2.5">
-          <p class="text-[10px] text-gray-400 font-medium mb-1 uppercase tracking-wider">deploymentLogs</p>
-          <p class="text-xl font-bold ${c.vaVal !== c.logsVal ? 'text-amber-500' : 'text-gray-900'}">${c.logsVal}</p>
-        </div>
-      </div>
-    </div>`).join('');
+        // ── KPI Cards ────────────────────────────────────────────────
+        const kpiCards = [
+          UI.kpiCard({
+            label: 'Total Calls',
+            valLeft: data.vaTotalCalls ?? '—',
+            valRight: data.totalCalls,
+            subLeft: 'calls processed',
+            subRight: 'entries logged',
+            iconName: 'phone'
+          }),
+          UI.kpiCard({
+            label: 'Total Minutes',
+            valLeft: data.vaTotalMinutes ?? '—',
+            valRight: data.totalMinutes ?? '—',
+            subLeft: 'minutes analyzed',
+            subRight: 'minutes logged',
+            iconName: 'clock'
+          }),
+          UI.kpiCard({
+            label: 'Avg Duration',
+            valLeft: data.vaAvgDuration ?? '—',
+            valRight: data.averageDuration ?? '—',
+            subLeft: 'mins per call',
+            subRight: 'mins per call',
+            iconName: 'trend'
+          }),
+        ];
+        document.getElementById('cancelKpiSection').innerHTML = kpiCards.join('');
 
-  // ── Shared progress bar helper ────────────────────────────────
-  function renderStatusBreakdown(elementId, entries, accentMap) {
-    const el = document.getElementById(elementId);
-    el.className = '';
-    if (!entries.length) {
-      el.innerHTML = '<p class="text-sm text-gray-400">No data available</p>';
-      return;
-    }
-    const total = entries.reduce((s, [, c]) => s + c, 0);
-    const fallbacks = ['bg-indigo-500','bg-purple-500','bg-cyan-500','bg-teal-500','bg-sky-500'];
-    let fi = 0;
-    const rows = entries.map(([status, count]) => {
-      const pct   = total > 0 ? ((count / total) * 100).toFixed(1) : 0;
-      const color = accentMap[status] || fallbacks[fi++ % fallbacks.length];
-      const textColor = color.replace('bg-','text-').replace('-500','-700').replace('-600','-700');
-      const bgBadge  = color.replace('-500','-50').replace('-600','-50');
-      return `
+        // ── Shared progress bar helper ────────────────────────────────
+        function renderStatusBreakdown(elementId, entries, accentMap) {
+          const el = document.getElementById(elementId);
+          el.className = '';
+          if (!entries.length) {
+            el.innerHTML = '<p class="text-sm ">No data available</p>';
+            return;
+          }
+          const total = entries.reduce((s, [, c]) => s + c, 0);
+          const fallbacks = ['bg-cohere-blue', 'bg-cohere-coral', 'bg-cohere-primary', 'bg-cohere-navy', 'bg-cohere-slate'];
+          let fi = 0;
+          const rows = entries.map(([status, count]) => {
+            const pct = total > 0 ? ((count / total) * 100).toFixed(1) : 0;
+            const color = accentMap[status] || fallbacks[fi++ % fallbacks.length];
+            const textColor = color.replace('bg-cohere-', 'text-cohere-');
+            const bgBadge = color.replace('cohere-', 'cohere-stone'); // simplified badge logic for cohere palette
+            return `
         <div class="mb-4 last:mb-0">
           <div class="flex justify-between items-center mb-1.5">
             <span class="text-sm font-medium text-gray-700">${status}</span>
             <div class="flex items-center gap-2 text-xs">
-              <span class="font-bold text-gray-900">${count}</span>
-              <span class="text-gray-400">of ${total}</span>
+              <span class="font-bold text-cohere-black">${count}</span>
+              <span class="">of ${total}</span>
               <span class="font-semibold px-2 py-0.5 rounded-full ${bgBadge} ${textColor}">${pct}%</span>
             </div>
           </div>
-          <div class="w-full bg-gray-100 rounded-full h-2">
+          <div class="w-full bg-cohere-borderLight rounded-full h-2">
             <div class="${color} h-2 rounded-full transition-all duration-500" style="width:${pct}%"></div>
           </div>
         </div>`;
-    }).join('');
-    el.innerHTML = `<p class="text-xs text-gray-400 mb-4">${total} calls in selected period</p>${rows}`;
-  }
+          }).join('');
+          el.innerHTML = `<p class="text-xs  mb-4">${total} calls in selected period</p>${rows}`;
+        }
 
-  // ── Completed Call Status ────────────────────────────────────
-  const completedEntries = Object.entries(data.completedStatuses || {}).sort((a, b) => b[1] - a[1]);
-  const completedColors  = { 'Completed': 'bg-emerald-500', 'Not Completed': 'bg-rose-500', 'Not Recorded': 'bg-gray-300' };
-  renderStatusBreakdown('cancelCompletionContent', completedEntries, completedColors);
+        // ── Completed Call Status ────────────────────────────────────
+        const completedEntries = Object.entries(data.completedStatuses || {}).sort((a, b) => b[1] - a[1]);
+        const completedColors = { 'Completed': 'bg-cohere-blue', 'Not Completed': 'bg-cohere-coral', 'Not Recorded': 'bg-cohere-stone' };
+        renderStatusBreakdown('cancelCompletionContent', completedEntries, completedColors);
 
-  // ── Disposition Breakdown ────────────────────────────────────
-  const dispColors  = ['bg-indigo-500','bg-purple-500','bg-cyan-500','bg-teal-500','bg-sky-500','bg-violet-500'];
-  const dispEntries = Object.entries(data.dispositionFreq || {}).sort((a, b) => b[1] - a[1]).slice(0, 6);
-  renderStatusBreakdown('cancelDispositionContent', dispEntries, {});
+        // ── Disposition Breakdown ────────────────────────────────────
+        const dispColors = ['bg-cohere-blue', 'bg-cohere-coral', 'bg-cohere-primary', 'bg-cohere-navy', 'bg-cohere-slate'];
+        const dispEntries = Object.entries(data.dispositionFreq || {}).sort((a, b) => b[1] - a[1]).slice(0, 6);
+        renderStatusBreakdown('cancelDispositionContent', dispEntries, {});
 
-  // ── Bot Response Time ─────────────────────────────────────────
-  const botEl = document.getElementById('cancelBotRtContent');
-  botEl.className = '';
-  if (data.botResponseTime) {
-    const ms    = parseFloat(data.botResponseTime);
-    const grade = ms < 500 ? { label: 'Excellent', color: 'text-emerald-400', bg: 'bg-emerald-500/10', bar: 'bg-emerald-500', pct: Math.min(ms / 2000 * 100, 100) }
-                : ms < 1500 ? { label: 'Good',      color: 'text-cyan-400',    bg: 'bg-cyan-500/10',    bar: 'bg-cyan-500',    pct: Math.min(ms / 2000 * 100, 100) }
-                : ms < 3000 ? { label: 'Fair',       color: 'text-amber-400',   bg: 'bg-amber-500/10',   bar: 'bg-amber-500',   pct: Math.min(ms / 2000 * 100, 100) }
-                :             { label: 'Slow',       color: 'text-rose-400',    bg: 'bg-rose-500/10',    bar: 'bg-rose-500',    pct: 100 };
-    botEl.innerHTML = `
+        // ── Bot Response Time ─────────────────────────────────────────
+        const botEl = document.getElementById('cancelBotRtContent');
+        botEl.className = '';
+        if (data.botResponseTime) {
+          const ms = parseFloat(data.botResponseTime);
+          const grade = ms < 500 ? { label: 'Excellent', color: 'text-cohere-blue', bg: 'bg-cohere-blue/10', bar: 'bg-cohere-blue', pct: Math.min(ms / 2000 * 100, 100) }
+            : ms < 1500 ? { label: 'Good', color: 'text-cohere-blue', bg: 'bg-cohere-blue/10', bar: 'bg-cohere-blue', pct: Math.min(ms / 2000 * 100, 100) }
+              : ms < 3000 ? { label: 'Fair', color: 'text-cohere-coral', bg: 'bg-cohere-coral/10', bar: 'bg-cohere-coral', pct: Math.min(ms / 2000 * 100, 100) }
+                : { label: 'Slow', color: 'text-cohere-coral', bg: 'bg-cohere-coral/10', bar: 'bg-cohere-coral', pct: 100 };
+          botEl.innerHTML = `
       <div class="flex items-center gap-4 mb-4">
-        <div class="flex-shrink-0 w-12 h-12 rounded-xl ${grade.bg} flex items-center justify-center">
-          <svg class="w-6 h-6 ${grade.color}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
-          </svg>
-        </div>
         <div>
-          <p class="text-3xl font-bold text-gray-900 tabular">${ms.toLocaleString()} <span class="text-base font-normal text-gray-400">ms</span></p>
-          <p class="text-xs text-gray-400 mt-0.5">average response time</p>
+          <p class="text-3xl font-bold text-cohere-black tabular">${ms.toLocaleString()} <span class="text-base font-normal ">ms</span></p>
+          <p class="text-xs  mt-0.5">average response time</p>
         </div>
-        <span class="ml-auto text-xs font-semibold px-2.5 py-1 rounded-full ${grade.bg} ${grade.color}">${grade.label}</span>
       </div>
-      <div class="w-full bg-gray-100 rounded-full h-2">
+      <div class="w-full bg-cohere-borderLight rounded-full h-2">
         <div class="${grade.bar} h-2 rounded-full transition-all duration-500" style="width:${grade.pct}%"></div>
       </div>
-      <div class="flex justify-between text-xs text-gray-400 mt-1">
+      <div class="flex justify-between text-xs  mt-1">
         <span>0 ms</span><span>1000 ms</span><span>2000 ms</span>
       </div>`;
-  } else {
-    botEl.innerHTML = '<p class="text-sm text-slate-500">No bot response data available</p>';
-  }
+        } else {
+          botEl.innerHTML = '<p class="text-sm text-slate-500">No bot response data available</p>';
+        }
 
-  // ── Cancellation & Auth Status ────────────────────────────────
-  const cancelColors = { 'Cancelled':'bg-rose-500','Transferred':'bg-amber-500','Unknown':'bg-slate-400','Pending':'bg-blue-500','Failed':'bg-red-600','Not Recorded':'bg-gray-300' };
-  const authColors   = { 'Authenticated':'bg-emerald-500','Not Authenticated':'bg-rose-500','Not Attempted':'bg-slate-400','Failed':'bg-red-600','Pending':'bg-amber-500','Not Recorded':'bg-gray-300' };
+        // ── Cancellation & Auth Status ────────────────────────────────
+        const cancelColors = { 'Cancelled': 'bg-cohere-coral', 'Transferred': 'bg-cohere-blue', 'Unknown': 'bg-cohere-slate', 'Pending': 'bg-cohere-navy', 'Failed': 'bg-cohere-coral', 'Not Recorded': 'bg-cohere-stone' };
+        const authColors = { 'Authenticated': 'bg-cohere-blue', 'Not Authenticated': 'bg-cohere-coral', 'Not Attempted': 'bg-cohere-slate', 'Failed': 'bg-cohere-coral', 'Pending': 'bg-cohere-navy', 'Not Recorded': 'bg-cohere-stone' };
 
-  renderStatusBreakdown('cancelStatusContent', Object.entries(data.cancellationStatuses || {}).sort((a,b)=>b[1]-a[1]), cancelColors);
-  renderStatusBreakdown('cancelAuthContent',   Object.entries(data.authStatuses        || {}).sort((a,b)=>b[1]-a[1]), authColors);
-}
+        renderStatusBreakdown('cancelStatusContent', Object.entries(data.cancellationStatuses || {}).sort((a, b) => b[1] - a[1]), cancelColors);
+        renderStatusBreakdown('cancelAuthContent', Object.entries(data.authStatuses || {}).sort((a, b) => b[1] - a[1]), authColors);
+      }
 
-// ── Boot ──────────────────────────────────────────────────────
-window.addEventListener('DOMContentLoaded', () => {
-  // Config guard
-  if (typeof CONFIG === 'undefined' || !CONFIG.API_KEY) {
-    document.getElementById('setupModal').classList.remove('hidden');
-    UI.setStatus('error', 'API key not configured — see config.js');
-    return;
-  }
+      // ── Boot ──────────────────────────────────────────────────────
+      window.addEventListener('DOMContentLoaded', () => {
+        // Config guard
+        if (typeof CONFIG === 'undefined' || !CONFIG.API_KEY) {
+          document.getElementById('setupModal').classList.remove('hidden');
+          UI.setStatus('error', 'API key not configured — see config.js');
+          return;
+        }
 
-  // Default date range: last 30 days
-  const end   = new Date();
-  const start = new Date();
-  start.setDate(end.getDate() - 30);
-  document.getElementById('startDate').value = toDateStr(start);
-  document.getElementById('endDate').value   = toDateStr(end);
+        // Default date range: last 30 days
+        const end = new Date();
+        const start = new Date();
+        start.setDate(end.getDate() - 30);
+        document.getElementById('startDate').value = toDateStr(start);
+        document.getElementById('endDate').value = toDateStr(end);
 
-  // Auto-refresh when date range changes
-  document.getElementById('startDate').addEventListener('change', () => triggerRefresh());
-  document.getElementById('endDate').addEventListener('change', () => triggerRefresh());
+        // Auto-refresh when date range changes
+        document.getElementById('startDate').addEventListener('change', () => triggerRefresh());
+        document.getElementById('endDate').addEventListener('change', () => triggerRefresh());
 
-  loadDashboard();
-});
-</script>
+        loadDashboard();
+      });
+      function toggleSidebar() {
+        const sidebar = document.getElementById('sidebar');
+        const wrapper = document.getElementById('mainWrapper');
+        const isMobile = window.innerWidth < 1024;
+
+        if (isMobile) {
+          sidebar.classList.toggle('hidden');
+        } else {
+          sidebar.classList.toggle('sidebar-closed');
+          wrapper.classList.toggle('main-full');
+        }
+      }
+    </script>
 
 </body>
+
 </html>
